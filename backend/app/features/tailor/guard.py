@@ -25,6 +25,8 @@ from app.features.tailor.models import (
 )
 
 number_re = re.compile(r"\d+(?:[.,]\d+)*")
+# A trailing "(Keyword, Keyword)" tag the model bolted onto a bullet.
+trailing_tag_re = re.compile(r"\s*\(([^()]{1,80})\)\s*(\.?)\s*$")
 
 
 def clean_dashes(text: str) -> str:
@@ -32,6 +34,14 @@ def clean_dashes(text: str) -> str:
     text = re.sub(r"(?<=\d)\s*[\u2013\u2014]\s*(?=\d)", "-", text)
     text = re.sub(r"\s*[\u2013\u2014]\s*", ", ", text)
     return text.strip()
+
+
+def strip_keyword_tag(bullet: str, original: str) -> str:
+    """Remove a trailing parenthetical the original bullet didn't have."""
+    match = trailing_tag_re.search(bullet)
+    if not match or match.group(1).strip().lower() in original.lower():
+        return bullet
+    return bullet[: match.start()] + (match.group(2) or "")
 
 
 def numbers_in(text: str) -> set[str]:
@@ -168,6 +178,7 @@ class _Guard:
         lost_metrics = 0
         for bullet, source_index in zip(rewritten, pairs, strict=True):
             source = original.bullets[source_index]
+            bullet = strip_keyword_tag(bullet, source)
             if self.invented_numbers(bullet) or self.unsupported_terms(bullet, entry_low):
                 bullet = source
                 reverted += 1

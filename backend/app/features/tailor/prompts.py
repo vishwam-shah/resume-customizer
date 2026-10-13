@@ -62,7 +62,9 @@ most relevant to this job come first, each rewritten to:
   * open with a strong past-tense action verb (present tense only for a current role),
   * surface the job's keywords where the original work genuinely involved them,
   * keep or sharpen the outcome and any original numbers (never create numbers),
-  * stay one or two lines; follow the tone guide.
+  * stay one or two lines; follow the tone guide,
+  * weave keywords into the sentence itself. NEVER append keyword lists or tags, such as \
+"(React, FastAPI)" or "(unit testing)", to the end of a bullet; that is keyword stuffing.
   Keep each entry's id exactly as given. Never merge, split, add or delete bullets: the count per \
 entry must equal the original.
 - termEvidence: one entry per posting term introduced under rule 5 (empty if none).

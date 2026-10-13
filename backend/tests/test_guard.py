@@ -166,3 +166,13 @@ def test_target_title_in_summary_is_not_flagged():
     out = _output(summary=f"{job.title} who builds Python services.")
     _, _, flags = apply_output(make_resume(), out, job, ["summary"])
     assert not flags
+
+
+def test_trailing_keyword_tags_are_stripped():
+    from app.features.tailor.guard import strip_keyword_tag
+
+    original = "Created a Redis cache, cutting load time from 2.1s to 0.6s."
+    tagged = "Created a Redis cache, cutting load time from 2.1s to 0.6s (Redis, caching)."
+    assert strip_keyword_tag(tagged, original) == original
+    kept = "Led the API (v2) migration"
+    assert strip_keyword_tag(kept, "Led the API (v2) migration") == kept
