@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { authClient } from "@/lib/authClient";
+import { authClient, describeAuthError } from "@/lib/authClient";
 import { cn } from "@/lib/format";
 
 type Mode = "signIn" | "signUp";
@@ -41,25 +41,6 @@ const copy: Record<
     switchHref: "/sign-in",
   },
 };
-
-/** Better Auth error codes, in words a person can act on. */
-function describeError(code: string | undefined, fallback: string | undefined): string {
-  switch (code) {
-    case "INVALID_EMAIL_OR_PASSWORD":
-      return "That email and password don't match. Check both and try again.";
-    case "USER_ALREADY_EXISTS":
-    case "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL":
-      return "An account with this email already exists. Sign in instead.";
-    case "PASSWORD_TOO_SHORT":
-      return `Use at least ${minPasswordLength} characters for your password.`;
-    case "INVALID_EMAIL":
-      return "Enter a valid email address, like name@example.com.";
-    case "TOO_MANY_REQUESTS":
-      return "Too many attempts. Wait a minute and try again.";
-    default:
-      return fallback || "Something went wrong. Try again.";
-  }
-}
 
 export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
   const id = useId();
@@ -97,14 +78,26 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
     setBusy(true);
     const email = String(form.get("email")).trim();
     const password = String(form.get("password"));
-    const { error } =
+    const { data, error } =
       mode === "signUp"
         ? await authClient.signUp.email({ name: String(form.get("name")).trim(), email, password })
         : await authClient.signIn.email({ email, password });
+    const verifyUrl = `/verify-email?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`;
+    if (error?.code === "EMAIL_NOT_VERIFIED") {
+      // Signed up earlier but never entered the code: send a fresh one.
+      await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" });
+      router.push(`${verifyUrl}&resent=1`);
+      return;
+    }
     if (error) {
       setBusy(false);
-      setErrors({ form: describeError(error.code, error.message) });
+      setErrors({ form: describeAuthError(error.code, error.message) });
       requestAnimationFrame(() => summaryRef.current?.focus());
+      return;
+    }
+    if (mode === "signUp" && !(data && "token" in data && data.token)) {
+      // No session yet: a code is on its way; the account is usable once it's entered.
+      router.push(verifyUrl);
       return;
     }
     router.replace(next);
@@ -190,6 +183,16 @@ export function AuthForm({ mode, next }: { mode: Mode; next: string }) {
             )}
           </button>
         </div>
+        {mode === "signIn" ? (
+          <p className="-mt-2 text-right text-sm">
+            <Link
+              href={`/forgot-password?next=${encodeURIComponent(next)}`}
+              className="font-medium underline underline-offset-4"
+            >
+              Forgot password?
+            </Link>
+          </p>
+        ) : null}
         <Button type="submit" size="lg" className="w-full" busy={busy} busyLabel={text.busy}>
           {text.submit}
         </Button>

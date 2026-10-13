@@ -32,3 +32,4 @@ export type Section = NonNullable<TailorRequest["sections"]>[number];
 export type Tone = NonNullable<TailorRequest["tone"]>;
 export type ExportFormat = ExportRequest["format"];
 export type LetterLength = NonNullable<CoverLetterRequest["length"]>;
+export type LatexApplyResult = Schemas["LatexApplyResult"];

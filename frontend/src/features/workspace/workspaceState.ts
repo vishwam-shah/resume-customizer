@@ -29,11 +29,15 @@ export type Version = {
   /** Change keys the user reverted to the original wording. */
   rejected: string[];
   coverLetter: string;
+  /** The user's own edits to the tailored LaTeX; null means use the generated source. */
+  latexEdited?: string | null;
 };
 
 export type WorkspaceState = {
   jobDescription: string;
   file: ParsedFile | null;
+  /** Set when the resume was pasted as LaTeX; results then include tailored LaTeX. */
+  latexSource: string | null;
   options: TailorOptions;
   /** Cached between versions so a new version skips re-reading the inputs. */
   original: ResumeDoc | null;
@@ -57,6 +61,7 @@ const idleStages = (): Record<StageId, StageStatus> =>
 export const initialState: WorkspaceState = {
   jobDescription: "",
   file: null,
+  latexSource: null,
   options: { sections: allSections, tone: "balanced" },
   original: null,
   analysis: null,
@@ -71,7 +76,7 @@ export const initialState: WorkspaceState = {
 export type WorkspaceAction =
   | { type: "hydrate"; state: Partial<WorkspaceState> }
   | { type: "setJobDescription"; value: string }
-  | { type: "setFile"; file: ParsedFile | null }
+  | { type: "setFile"; file: ParsedFile | null; latexSource?: string | null }
   | { type: "setOptions"; options: Partial<TailorOptions> }
   | { type: "runStarted" }
   | { type: "stage"; id: StageId; status: StageStatus }
@@ -86,6 +91,7 @@ export type WorkspaceAction =
   | { type: "toggleChange"; key: string }
   | { type: "setChanges"; keys: string[]; reject: boolean }
   | { type: "setCoverLetter"; versionId: string; text: string }
+  | { type: "setLatexEdit"; versionId: string; text: string | null }
   | { type: "showView"; view: WorkspaceState["view"] }
   | { type: "reset" };
 
@@ -120,7 +126,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return { ...next, analysis: null, scoresBefore: null };
     }
     case "setFile":
-      return clearDerived({ ...state, file: action.file });
+      return clearDerived({ ...state, file: action.file, latexSource: action.latexSource ?? null });
     case "setOptions":
       return { ...state, options: { ...state.options, ...action.options } };
     case "runStarted": {
@@ -202,6 +208,8 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
           : v.rejected.filter((k) => !action.keys.includes(k)),
       }));
     }
+    case "setLatexEdit":
+      return updateVersion(state, action.versionId, (v) => ({ ...v, latexEdited: action.text }));
     case "setCoverLetter":
       return updateVersion(state, action.versionId, (v) => ({
         ...v,

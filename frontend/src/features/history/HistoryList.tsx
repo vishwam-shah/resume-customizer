@@ -1,11 +1,11 @@
 "use client";
 
 import { AlertDialog } from "@base-ui/react/alert-dialog";
-import { Toast } from "@base-ui/react/toast";
 import { ArrowRight, ClockCounterClockwise, Plus, Trash } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import { pluralize } from "@/lib/format";
 import { storageKey } from "../workspace/WorkspaceProvider";
@@ -52,7 +52,6 @@ export function HistoryList({ runs: initialRuns }: { runs: RunSummary[] }) {
 
 function RunCard({ run, onDeleted }: { run: RunSummary; onDeleted: () => void }) {
   const router = useRouter();
-  const toasts = Toast.useToastManager();
   const [opening, startOpening] = useTransition();
   const [deleting, startDeleting] = useTransition();
   const headingId = `run-${run.id}`;
@@ -62,7 +61,9 @@ function RunCard({ run, onDeleted }: { run: RunSummary; onDeleted: () => void })
     startOpening(async () => {
       const data = (await getRun(run.id)) as { versions: Version[] } | null;
       if (!data) {
-        toasts.add({ title: "That run no longer exists", type: "error" });
+        toast.error("That run no longer exists", {
+          description: "It may have been deleted on another device.",
+        });
         return;
       }
       const latest = data.versions.at(-1);
@@ -84,7 +85,7 @@ function RunCard({ run, onDeleted }: { run: RunSummary; onDeleted: () => void })
     startDeleting(async () => {
       await deleteRun(run.id);
       onDeleted();
-      toasts.add({ title: "Deleted from history", description: run.jobTitle, type: "success" });
+      toast.success("Deleted from history", { description: run.jobTitle });
     });
   }
 

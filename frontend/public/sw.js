@@ -10,7 +10,7 @@ const version = "tailor-v1";
 const shellCache = `${version}-shell`;
 const assetCache = `${version}-assets`;
 const precache = ["/offline.html", "/icons/icon-192.png", "/icons/icon-512.png"];
-const publicPages = ["/", "/sign-in", "/sign-up"];
+const publicPages = ["/", "/sign-in", "/sign-up", "/forgot-password"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(shellCache).then((cache) => cache.addAll(precache)));

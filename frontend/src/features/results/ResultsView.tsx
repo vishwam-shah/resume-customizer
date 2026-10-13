@@ -2,7 +2,6 @@
 
 import { Dialog } from "@base-ui/react/dialog";
 import { Tabs } from "@base-ui/react/tabs";
-import { Toast } from "@base-ui/react/toast";
 import { Toggle } from "@base-ui/react/toggle";
 import { ToggleGroup } from "@base-ui/react/toggle-group";
 import {
@@ -15,11 +14,13 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button, buttonClasses } from "@/components/ui/Button";
 import type { ResumeDoc } from "@/lib/api/types";
 import { formatDuration, pluralize } from "@/lib/format";
 import { CoverLetterPanel } from "../coverLetter/CoverLetterPanel";
 import { SaveIndicator } from "../history/SaveIndicator";
+import { LatexPanel } from "../latex/LatexPanel";
 import { summarizeOptions, TailorOptionsPanel } from "../tailor/TailorOptionsPanel";
 import { useWorkspace } from "../workspace/WorkspaceProvider";
 import { activeVersion, maxVersions } from "../workspace/workspaceState";
@@ -38,7 +39,6 @@ export function ResultsView() {
   const { state, saveStatus, dispatch } = useWorkspace();
   const version = activeVersion(state);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const toasts = Toast.useToastManager();
   const [tab, setTab] = useState("resume");
 
   // Arriving at results (or switching version) moves focus to the heading.
@@ -68,12 +68,10 @@ export function ResultsView() {
   async function copyText(resume: ResumeDoc) {
     try {
       await navigator.clipboard.writeText(resumeToPlainText(resume));
-      toasts.add({ title: "Resume copied as plain text", type: "success" });
+      toast.success("Resume copied as plain text");
     } catch {
-      toasts.add({
-        title: "Couldn't access the clipboard",
+      toast.error("Couldn't access the clipboard", {
         description: "Use Download > Plain text instead.",
-        type: "error",
       });
     }
   }
@@ -173,6 +171,11 @@ export function ResultsView() {
           <Tabs.Tab value="letter" className={tabClass}>
             Cover letter
           </Tabs.Tab>
+          {state.latexSource ? (
+            <Tabs.Tab value="latex" className={tabClass}>
+              LaTeX
+            </Tabs.Tab>
+          ) : null}
           <Tabs.Indicator className="absolute top-[var(--active-tab-top)] left-[var(--active-tab-left)] z-0 h-[var(--active-tab-height)] w-[var(--active-tab-width)] rounded-[calc(var(--radius-control)-2px)] bg-bg shadow-card transition-all duration-200 ease-out" />
         </Tabs.List>
 
@@ -222,6 +225,20 @@ export function ResultsView() {
             onChange={(text) => dispatch({ type: "setCoverLetter", versionId: version.id, text })}
           />
         </Tabs.Panel>
+
+        {state.latexSource ? (
+          <Tabs.Panel value="latex" className="mt-6 outline-none">
+            <h2 className="sr-only">Tailored LaTeX</h2>
+            <LatexPanel
+              source={state.latexSource}
+              original={original}
+              tailored={finalResume}
+              edited={version.latexEdited ?? null}
+              onEdit={(text) => dispatch({ type: "setLatexEdit", versionId: version.id, text })}
+              fileStem={original.contact.name.replace(/[^A-Za-z0-9]+/g, "-")}
+            />
+          </Tabs.Panel>
+        ) : null}
       </Tabs.Root>
     </div>
   );

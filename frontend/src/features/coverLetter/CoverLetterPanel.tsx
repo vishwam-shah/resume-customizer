@@ -2,9 +2,9 @@
 
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
-import { Toast } from "@base-ui/react/toast";
 import { ArrowsClockwise, Copy, Envelope, Stop } from "@phosphor-icons/react";
 import { useId, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { ApiError, isAbort } from "@/lib/api/client";
 import { streamEvents } from "@/lib/api/sse";
@@ -28,7 +28,6 @@ const lengths: Array<{ value: LetterLength; label: string }> = [
 
 export function CoverLetterPanel({ jobDescription, resume, analysis, text, onChange }: Props) {
   const id = useId();
-  const toasts = Toast.useToastManager();
   const [length, setLength] = useState<LetterLength>("standard");
   const [streaming, setStreaming] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
@@ -59,10 +58,8 @@ export function CoverLetterPanel({ jobDescription, resume, analysis, text, onCha
       }
       onChange(draft.trim());
       if (previous) {
-        toasts.add({
-          title: "New cover letter written",
-          type: "success",
-          actionProps: { children: "Undo", onClick: () => onChange(previous) },
+        toast.success("New cover letter written", {
+          action: { label: "Undo", onClick: () => onChange(previous) },
         });
       }
       requestAnimationFrame(() => editorRef.current?.focus());
@@ -82,13 +79,10 @@ export function CoverLetterPanel({ jobDescription, resume, analysis, text, onCha
   async function copy() {
     try {
       await navigator.clipboard.writeText(text);
-      toasts.add({ title: "Copied to clipboard", type: "success" });
+      toast.success("Cover letter copied to clipboard");
     } catch {
       editorRef.current?.select();
-      toasts.add({
-        title: "Select the text and copy it with Ctrl+C",
-        type: "info",
-      });
+      toast.info("Select the text and copy it with Ctrl+C");
     }
   }
 

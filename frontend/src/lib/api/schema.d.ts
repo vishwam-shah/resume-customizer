@@ -58,6 +58,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/latex/parse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Parse Latex
+         * @description Read a pasted LaTeX resume into the same shape as an uploaded file.
+         */
+        post: operations["parse_latex_api_v1_latex_parse_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/latex/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply Latex
+         * @description Write the tailored text back into the user's LaTeX, leaving layout untouched.
+         */
+        post: operations["apply_latex_api_v1_latex_apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tailor": {
         parameters: {
             query?: never;
@@ -250,6 +290,31 @@ export interface components {
             keywords: string[];
             /** Responsibilities */
             responsibilities: string[];
+        };
+        /** LatexApplyRequest */
+        LatexApplyRequest: {
+            /** Source */
+            source: string;
+            original: components["schemas"]["ResumeDoc"];
+            tailored: components["schemas"]["ResumeDoc"];
+        };
+        /** LatexApplyResult */
+        LatexApplyResult: {
+            /** Source */
+            source: string;
+            /** Bulletsupdated */
+            bulletsUpdated: number;
+            /** Summaryupdated */
+            summaryUpdated: boolean;
+            /** Skillsupdated */
+            skillsUpdated: number;
+            /** Unmatched */
+            unmatched: string[];
+        };
+        /** LatexSource */
+        LatexSource: {
+            /** Source */
+            source: string;
         };
         /**
          * Meta
@@ -538,6 +603,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ParsedFile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    parse_latex_api_v1_latex_parse_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LatexSource"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ParsedFile"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_latex_api_v1_latex_apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LatexApplyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LatexApplyResult"];
                 };
             };
             /** @description Validation Error */

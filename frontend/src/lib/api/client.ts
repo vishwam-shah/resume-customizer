@@ -1,4 +1,11 @@
-import type { ErrorBody, ExportRequest, Meta, ParsedFile } from "./types";
+import type {
+  ErrorBody,
+  ExportRequest,
+  LatexApplyResult,
+  Meta,
+  ParsedFile,
+  ResumeDoc,
+} from "./types";
 
 export const apiUrl = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(
   /\/$/,
@@ -101,4 +108,27 @@ export async function exportDocument(
   const disposition = response.headers.get("Content-Disposition") ?? "";
   const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `resume.${payload.format}`;
   return { blob: await response.blob(), fileName };
+}
+
+export async function parseLatex(source: string, signal?: AbortSignal): Promise<ParsedFile> {
+  const response = await request("/api/v1/latex/parse", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source }),
+    signal,
+  });
+  return response.json();
+}
+
+export async function applyLatex(
+  payload: { source: string; original: ResumeDoc; tailored: ResumeDoc },
+  signal?: AbortSignal,
+): Promise<LatexApplyResult> {
+  const response = await request("/api/v1/latex/apply", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal,
+  });
+  return response.json();
 }

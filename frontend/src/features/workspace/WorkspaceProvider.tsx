@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { toast } from "sonner";
 import { saveRun } from "@/features/history/actions";
 import { ApiError, isAbort } from "@/lib/api/client";
 import { streamEvents } from "@/lib/api/sse";
@@ -123,6 +124,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     dispatch({ type: "runCancelled" });
   }, []);
 
+  // Lets the error toast's "Try again" call the latest startRun.
+  const startRunRef = useRef<() => Promise<void>>(async () => {});
+
   const startRun = useCallback(async () => {
     const current = stateRef.current;
     if (!current.file || current.run.status === "running") return;
@@ -178,6 +182,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
               coverLetter: "",
             };
             dispatch({ type: "runSucceeded", version });
+            const before = latest.scoresBefore?.match.score;
+            toast.success("Your tailored resume is ready", {
+              description:
+                before === undefined
+                  ? `Job match ${result.scores.match.score}%`
+                  : `Job match ${before}% → ${result.scores.match.score}%`,
+            });
             break;
           }
         }
@@ -185,11 +196,19 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       if (!result) throw ApiError.fromUnknown(null);
     } catch (error) {
       if (isAbort(error)) return;
-      dispatch({ type: "runFailed", error: ApiError.fromUnknown(error) });
+      const apiError = ApiError.fromUnknown(error);
+      dispatch({ type: "runFailed", error: apiError });
+      toast.error(apiError.message, {
+        description: apiError.hint,
+        duration: 12_000,
+        action: { label: "Try again", onClick: () => void startRunRef.current() },
+      });
     } finally {
       if (controller.current === abort) controller.current = null;
     }
   }, []);
+
+  startRunRef.current = startRun;
 
   const value = useMemo(
     () => ({ state, saveStatus, dispatch, startRun, cancelRun }),

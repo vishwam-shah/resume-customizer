@@ -1,7 +1,10 @@
 "use client";
 
+import { Toggle } from "@base-ui/react/toggle";
+import { ToggleGroup } from "@base-ui/react/toggle-group";
 import {
   ArrowsClockwise,
+  FileCode,
   FileDoc,
   FilePdf,
   Trash,
@@ -13,6 +16,7 @@ import { Spinner } from "@/components/ui/Button";
 import type { ParsedFile } from "@/lib/api/types";
 import { cn, formatBytes, pluralize } from "@/lib/format";
 import { limits } from "@/lib/limits";
+import { LatexPasteField } from "./LatexPasteField";
 
 type Props = {
   file: ParsedFile | null;
@@ -22,6 +26,8 @@ type Props = {
   requiredError: string | null;
   onSelect: (file: File) => void;
   onRemove: () => void;
+  latexSource: string | null;
+  onLatex: (file: ParsedFile, source: string) => void;
 };
 
 export function ResumeDropzone({
@@ -31,10 +37,15 @@ export function ResumeDropzone({
   requiredError,
   onSelect,
   onRemove,
+  latexSource,
+  onLatex,
 }: Props) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [mode, setMode] = useState<"file" | "latex">(latexSource ? "latex" : "file");
+  const [editingLatex, setEditingLatex] = useState(false);
+  const showFile = Boolean(file) && !editingLatex;
   const labelId = `${id}-label`;
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
@@ -68,11 +79,38 @@ export function ResumeDropzone({
 
   return (
     <div className="flex h-full flex-col gap-2">
-      <p id={labelId} className="font-medium">
-        Resume
-      </p>
+      <div className="flex items-end justify-between gap-3">
+        <p id={labelId} className="font-medium">
+          Resume
+        </p>
+        {!showFile && !uploadingName ? (
+          <ToggleGroup
+            aria-label="How to add your resume"
+            value={[mode]}
+            onValueChange={(value) => value[0] && setMode(value[0] as "file" | "latex")}
+            className="inline-flex rounded-[var(--radius-control)] border border-border bg-surface p-0.5"
+          >
+            {(["file", "latex"] as const).map((value) => (
+              <Toggle
+                key={value}
+                value={value}
+                className="flex min-h-8 items-center gap-1.5 rounded-[calc(var(--radius-control)-2px)] px-2.5 text-muted text-sm hover:text-fg data-[pressed]:bg-bg data-[pressed]:text-fg data-[pressed]:shadow-card"
+              >
+                {value === "file" ? (
+                  <UploadSimple aria-hidden className="size-4" />
+                ) : (
+                  <FileCode aria-hidden className="size-4" />
+                )}
+                {value === "file" ? "Upload file" : "Paste LaTeX"}
+              </Toggle>
+            ))}
+          </ToggleGroup>
+        ) : null}
+      </div>
       <p id={hintId} className="text-muted text-sm">
-        PDF or Word (.docx), up to {formatBytes(limits.maxUploadBytes)}.
+        {mode === "latex" && !showFile
+          ? "Your .tex source. The tailored version keeps your template."
+          : `PDF or Word (.docx), up to ${formatBytes(limits.maxUploadBytes)}.`}
       </p>
       {input}
 
@@ -85,8 +123,21 @@ export function ResumeDropzone({
           <p className="font-medium">Reading {uploadingName}…</p>
           <p className="text-muted text-sm">Extracting text. This takes a second.</p>
         </div>
-      ) : file ? (
-        <FileCard file={file} onReplace={choose} onRemove={onRemove} />
+      ) : showFile && file ? (
+        <FileCard
+          file={file}
+          onReplace={file.fileType === "tex" ? () => setEditingLatex(true) : choose}
+          onRemove={onRemove}
+        />
+      ) : mode === "latex" ? (
+        <LatexPasteField
+          initialSource={latexSource ?? ""}
+          requiredError={requiredError}
+          onParsed={(parsed, source) => {
+            setEditingLatex(false);
+            onLatex(parsed, source);
+          }}
+        />
       ) : (
         // biome-ignore lint/a11y/noStaticElementInteractions: drag-and-drop is a pointer enhancement; the Choose file button is the accessible path (WCAG 2.5.7)
         <div
@@ -143,10 +194,14 @@ function FileCard({
   onReplace: () => void;
   onRemove: () => void;
 }) {
-  const Icon = file.fileType === "pdf" ? FilePdf : FileDoc;
+  const Icon = file.fileType === "pdf" ? FilePdf : file.fileType === "tex" ? FileCode : FileDoc;
   const details = [
     formatBytes(file.sizeBytes),
-    file.fileType === "pdf" ? pluralize(file.pageCount, "page") : "Word document",
+    file.fileType === "pdf"
+      ? pluralize(file.pageCount, "page")
+      : file.fileType === "tex"
+        ? "LaTeX source"
+        : "Word document",
     `${file.wordCount.toLocaleString()} words`,
   ];
 
@@ -190,7 +245,8 @@ function FileCard({
           className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] border border-border-strong px-4 font-medium text-sm hover:bg-surface-2"
         >
           <ArrowsClockwise aria-hidden className="size-4" />
-          Replace<span className="sr-only"> {file.fileName}</span>
+          {file.fileType === "tex" ? "Edit LaTeX" : "Replace"}
+          <span className="sr-only"> {file.fileName}</span>
         </button>
         <button
           type="button"

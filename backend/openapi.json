@@ -93,6 +93,90 @@
         }
       }
     },
+    "/api/v1/latex/parse": {
+      "post": {
+        "tags": [
+          "latex"
+        ],
+        "summary": "Parse Latex",
+        "description": "Read a pasted LaTeX resume into the same shape as an uploaded file.",
+        "operationId": "parse_latex_api_v1_latex_parse_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LatexSource"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParsedFile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/latex/apply": {
+      "post": {
+        "tags": [
+          "latex"
+        ],
+        "summary": "Apply Latex",
+        "description": "Write the tailored text back into the user's LaTeX, leaving layout untouched.",
+        "operationId": "apply_latex_api_v1_latex_apply_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LatexApplyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LatexApplyResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/tailor": {
       "post": {
         "tags": [
@@ -665,6 +749,80 @@
           "responsibilities"
         ],
         "title": "JobAnalysis"
+      },
+      "LatexApplyRequest": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Source"
+          },
+          "original": {
+            "$ref": "#/components/schemas/ResumeDoc"
+          },
+          "tailored": {
+            "$ref": "#/components/schemas/ResumeDoc"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "original",
+          "tailored"
+        ],
+        "title": "LatexApplyRequest"
+      },
+      "LatexApplyResult": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "bulletsUpdated": {
+            "type": "integer",
+            "title": "Bulletsupdated"
+          },
+          "summaryUpdated": {
+            "type": "boolean",
+            "title": "Summaryupdated"
+          },
+          "skillsUpdated": {
+            "type": "integer",
+            "title": "Skillsupdated"
+          },
+          "unmatched": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unmatched"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "bulletsUpdated",
+          "summaryUpdated",
+          "skillsUpdated",
+          "unmatched"
+        ],
+        "title": "LatexApplyResult"
+      },
+      "LatexSource": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "title": "LatexSource"
       },
       "Meta": {
         "properties": {

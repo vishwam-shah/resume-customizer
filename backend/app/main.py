@@ -22,6 +22,7 @@ from app.core.rate_limit import limiter
 from app.core.schemas import CamelModel
 from app.features.cover_letter.router import router as cover_letter_router
 from app.features.export.router import router as export_router
+from app.features.latex.router import router as latex_router
 from app.features.resume.router import router as resume_router
 from app.features.tailor.events import DoneEvent, ErrorBody, StageEvent
 from app.features.tailor.models import TailorResult
@@ -81,7 +82,13 @@ def create_app() -> FastAPI:
             model=llm.active_model(),
         )
 
-    for feature in (resume_router, tailor_router, cover_letter_router, export_router):
+    for feature in (
+        resume_router,
+        latex_router,
+        tailor_router,
+        cover_letter_router,
+        export_router,
+    ):
         api.include_router(feature)
     app.include_router(api)
     _register_stream_schemas(app)

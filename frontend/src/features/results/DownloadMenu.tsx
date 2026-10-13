@@ -1,9 +1,9 @@
 "use client";
 
 import { Menu } from "@base-ui/react/menu";
-import { Toast } from "@base-ui/react/toast";
 import { CaretDown, DownloadSimple, FileDoc, FilePdf, FileText } from "@phosphor-icons/react";
 import { useState } from "react";
+import { toast } from "sonner";
 import { buttonClasses, Spinner } from "@/components/ui/Button";
 import { ApiError, exportDocument } from "@/lib/api/client";
 import type { ExportFormat, ExportRequest } from "@/lib/api/types";
@@ -41,7 +41,6 @@ type Props = {
 };
 
 export function DownloadMenu({ label = "Download", build, variant = "primary", disabled }: Props) {
-  const toasts = Toast.useToastManager();
   const [busy, setBusy] = useState<ExportFormat | null>(null);
 
   async function download(format: ExportFormat) {
@@ -49,19 +48,12 @@ export function DownloadMenu({ label = "Download", build, variant = "primary", d
     try {
       const { blob, fileName } = await exportDocument(build(format));
       saveBlob(blob, fileName);
-      toasts.add({
-        title: "Downloaded",
-        description: fileName,
-        type: "success",
-      });
+      toast.success("Downloaded", { description: fileName });
     } catch (error) {
       const apiError = ApiError.fromUnknown(error);
-      toasts.add({
-        title: apiError.message,
+      toast.error(apiError.message, {
         description: apiError.hint,
-        type: "error",
-        priority: "high",
-        timeout: 0,
+        action: { label: "Try again", onClick: () => void download(format) },
       });
     } finally {
       setBusy(null);

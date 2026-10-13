@@ -1,7 +1,8 @@
 "use client";
 
 import { ArrowRight, Flask, WarningOctagon } from "@phosphor-icons/react";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
+import { toast } from "sonner";
 import { Button, Spinner } from "@/components/ui/Button";
 import type { ParsedFile } from "@/lib/api/types";
 import { checkJobDescription } from "@/lib/limits";
@@ -19,7 +20,6 @@ export function InputsView() {
   const { state, dispatch, startRun } = useWorkspace();
   const [attempted, setAttempted] = useState(false);
   const summaryRef = useRef<HTMLDivElement>(null);
-  const runErrorRef = useRef<HTMLDivElement>(null);
   const {
     upload,
     uploadingName,
@@ -42,11 +42,6 @@ export function InputsView() {
       text: visibleErrors.resume,
     },
   ].filter(Boolean) as Array<{ href: string; text: string }>;
-
-  const runError = state.run.status === "error" ? state.run.error : null;
-  useEffect(() => {
-    if (runError) runErrorRef.current?.focus();
-  }, [runError]);
 
   function submit(event?: FormEvent) {
     event?.preventDefault();
@@ -121,28 +116,6 @@ export function InputsView() {
         </p>
       ) : null}
 
-      {runError ? (
-        <div
-          ref={runErrorRef}
-          tabIndex={-1}
-          role="alert"
-          className="mt-8 flex items-start gap-3 rounded-[var(--radius-card)] border border-removed bg-removed-bg p-4 outline-none"
-        >
-          <WarningOctagon
-            aria-hidden
-            weight="fill"
-            className="mt-0.5 size-5 shrink-0 text-removed"
-          />
-          <div className="flex-1">
-            <p className="font-medium text-removed">{runError.message}</p>
-            <p className="mt-0.5 text-fg text-sm">{runError.hint}</p>
-          </div>
-          <Button size="sm" variant="secondary" onClick={() => void startRun()}>
-            Try again
-          </Button>
-        </div>
-      ) : null}
-
       {errorList.length > 0 ? (
         <div
           ref={summaryRef}
@@ -197,6 +170,14 @@ export function InputsView() {
               error={uploadError}
               requiredError={uploadError ? null : visibleErrors.resume}
               onSelect={(file) => void upload(file)}
+              latexSource={state.latexSource}
+              onLatex={(file, latexSource) => {
+                clearError();
+                dispatch({ type: "setFile", file, latexSource });
+                toast.success("LaTeX ready", {
+                  description: `${file.wordCount.toLocaleString()} words read from your source`,
+                });
+              }}
               onRemove={() => {
                 clearError();
                 dispatch({ type: "setFile", file: null });
