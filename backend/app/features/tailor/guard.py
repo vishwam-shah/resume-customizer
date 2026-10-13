@@ -162,10 +162,16 @@ class _Guard:
         seen: set[str] = set()
         dropped: set[int] = set()
         reverted = 0
+        lost_metrics = 0
         for bullet, source_index in zip(rewritten, pairs, strict=True):
+            source = original.bullets[source_index]
             if self.invented_numbers(bullet) or self.unsupported_terms(bullet, entry_low):
-                bullet = original.bullets[source_index]
+                bullet = source
                 reverted += 1
+            elif numbers_in(source) - numbers_in(bullet):
+                # Metrics are the strongest evidence on a resume; never lose one.
+                bullet = source
+                lost_metrics += 1
             key = bullet.strip().lower()
             if key in seen:
                 dropped.add(source_index)  # a repeated line; its source still needs a home
@@ -186,6 +192,15 @@ class _Guard:
                     message=f"{reverted} bullet{'s' if reverted > 1 else ''} kept as originally "
                     "written, because the rewrite added a number or skill your resume "
                     "doesn't show.",
+                )
+            )
+        if lost_metrics:
+            self.flags.append(
+                Flag(
+                    section=section,
+                    item_id=original.id,
+                    message=f"{lost_metrics} bullet{'s' if lost_metrics > 1 else ''} kept as "
+                    "originally written, because the rewrite dropped a number from it.",
                 )
             )
         return result

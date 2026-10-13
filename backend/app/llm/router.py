@@ -15,6 +15,7 @@ from collections.abc import AsyncIterator
 
 from pydantic import BaseModel, ValidationError
 
+from app.core.config import settings
 from app.core.errors import LlmUnavailableError
 from app.llm.providers import Provider, ProviderError, build_providers
 from app.llm.strict_schema import strict_schema
@@ -70,7 +71,13 @@ async def _with_retries(p: Provider, call):
     """Run `call` with short backoff on transient provider errors."""
     for attempt in range(3):
         try:
-            return await call()
+            # Wall-clock deadline: SDK/httpx timeouts are per read, so a server
+            # trickling bytes could otherwise hold a request for minutes.
+            async with asyncio.timeout(settings.llm_timeout_seconds):
+                return await call()
+        except TimeoutError:
+            _bench(p, 60)
+            raise ProviderError(f"{p.name} exceeded {settings.llm_timeout_seconds:.0f}s") from None
         except ProviderError as e:
             if e.bench_seconds:
                 _bench(p, e.bench_seconds)

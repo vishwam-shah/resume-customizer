@@ -15,6 +15,7 @@ from typing import Any, Protocol
 import httpx
 from google import genai
 from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 
 from app.core.config import settings
 
@@ -48,19 +49,50 @@ def _status_error(name: str, status: int, detail: str, retry_after: float = 0) -
         # Don't sleep on a rate limit inside a user-facing request: bench this
         # provider until its window resets and let the router try the next one.
         return ProviderError(f"{name} rate limited", bench_seconds=retry_after or 30)
+    if status == 503:
+        # "Model is experiencing high demand": other models are usually fine.
+        return ProviderError(f"{name} overloaded", bench_seconds=30)
     if status >= 500:
         return ProviderError(f"{name} server error {status}", retryable=True)
     return ProviderError(f"{name} rejected request ({status}): {detail[:300]}")
 
 
+def _gemini_error(name: str, error: Exception) -> ProviderError:
+    """Map any google-genai exception to a ProviderError.
+
+    The SDK raises different hierarchies depending on the API surface (the
+    Interactions API has its own, e.g. RateLimitError). They all expose an
+    HTTP status as `code` or `status_code`; anything without one is treated
+    as a transient network failure.
+    """
+    status = getattr(error, "status_code", None) or getattr(error, "code", None)
+    if isinstance(status, int):
+        return _status_error(name, status, str(error))
+    if isinstance(error, genai_errors.APIError):
+        return _status_error(name, 500, str(error))
+    if isinstance(error, TimeoutError) or "Timeout" in type(error).__name__:
+        # A model that just timed out will likely time out again: move on.
+        return ProviderError(f"{name} timed out", bench_seconds=60)
+    return ProviderError(f"{name} network error: {type(error).__name__}", retryable=True)
+
+
 class GeminiProvider:
     """Google Gemini via the Interactions API (google-genai SDK)."""
 
-    name = "gemini"
-
     def __init__(self, api_key: str, model: str) -> None:
+        # Each model is its own provider: one being overloaded shouldn't sink the rest.
+        self.name = f"gemini/{model.removeprefix('gemini-')}"
         self.model = model
-        self._client = genai.Client(api_key=api_key).aio
+        # A hard timeout and no SDK-internal retries: on an overloaded model the
+        # SDK would otherwise back off for minutes instead of letting the router
+        # fail over to the next model.
+        self._client = genai.Client(
+            api_key=api_key,
+            http_options=genai_types.HttpOptions(
+                timeout=int(settings.llm_timeout_seconds * 1000),
+                retry_options=genai_types.HttpRetryOptions(attempts=1),
+            ),
+        ).aio
 
     def _config(self, temperature: float, max_tokens: int) -> dict[str, Any]:
         # Thinking can't be turned off on Gemini 3; "low" keeps it from
@@ -83,10 +115,10 @@ class GeminiProvider:
                 generation_config=self._config(temperature, max_tokens),
                 store=False,
             )
-        except genai_errors.APIError as e:
-            raise _status_error(self.name, e.code or 500, str(e.message)) from e
-        except httpx.TransportError as e:
-            raise ProviderError(f"{self.name} network error: {e}", retryable=True) from e
+        except ProviderError:
+            raise
+        except Exception as e:
+            raise _gemini_error(self.name, e) from e
         text = interaction.output_text or ""
         if not text.strip():
             raise ProviderError(f"{self.name} returned an empty body", retryable=True)
@@ -110,10 +142,10 @@ class GeminiProvider:
                 text = getattr(event.delta, "text", None)
                 if event.delta.type == "text" and text:
                     yield text
-        except genai_errors.APIError as e:
-            raise _status_error(self.name, e.code or 500, str(e.message)) from e
-        except httpx.TransportError as e:
-            raise ProviderError(f"{self.name} network error: {e}", retryable=True) from e
+        except ProviderError:
+            raise
+        except Exception as e:
+            raise _gemini_error(self.name, e) from e
 
 
 class GroqProvider:
@@ -193,18 +225,20 @@ class GroqProvider:
 
 
 def build_providers() -> list[Provider]:
-    """Configured providers in chain order; ones without a key are skipped."""
-    order = [n.strip() for n in settings.llm_chain.split(",") if n.strip()]
+    """Providers from LLM_CHAIN ("provider/model,..."); ones without a key are skipped."""
+    groq_client: httpx.AsyncClient | None = None
     chain: list[Provider] = []
-    for name in order:
-        if name == "gemini" and settings.gemini_api_key:
-            chain.append(GeminiProvider(settings.gemini_api_key, settings.gemini_model))
-        elif name == "groq" and settings.groq_api_key:
-            client = httpx.AsyncClient(
+    for entry in (e.strip() for e in settings.llm_chain.split(",")):
+        provider, _, model = entry.partition("/")
+        if not model:
+            continue
+        if provider == "gemini" and settings.gemini_api_key:
+            chain.append(GeminiProvider(settings.gemini_api_key, model))
+        elif provider == "groq" and settings.groq_api_key:
+            groq_client = groq_client or httpx.AsyncClient(
                 base_url=settings.groq_base_url.rstrip("/"),
                 headers={"Authorization": f"Bearer {settings.groq_api_key}"},
                 timeout=settings.llm_timeout_seconds,
             )
-            models = [m.strip() for m in settings.groq_models.split(",") if m.strip()]
-            chain += [GroqProvider(m, client) for m in models]
+            chain.append(GroqProvider(model, groq_client))
     return chain

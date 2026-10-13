@@ -143,3 +143,19 @@ def test_duplicate_bullets_from_model_are_collapsed():
     out = _output(experience=[TailoredEntry(id="exp-1", bullets=[first, first])])
     doc, _, _ = apply_output(original, out, make_job(), all_sections)
     assert sorted(doc.experience[0].bullets) == sorted([first, second])
+
+
+def test_rewrite_that_drops_a_metric_is_reverted():
+    original = make_resume()
+    first, second = original.experience[0].bullets
+    out = _output(
+        experience=[
+            TailoredEntry(
+                id="exp-1",
+                bullets=["Built a high-throughput FastAPI service", second],
+            )
+        ]
+    )
+    doc, _, flags = apply_output(original, out, make_job(), all_sections)
+    assert doc.experience[0].bullets[0] == first  # "2000 requests per minute" kept
+    assert any("dropped a number" in f.message for f in flags)

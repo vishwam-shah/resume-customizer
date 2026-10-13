@@ -1,0 +1,23 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Creates the FastAPI backend from backend/Dockerfile.
+services:
+  - type: web
+    name: resume-customizer-api
+    runtime: docker
+    plan: free
+    region: virginia
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      # Secrets: entered in the Render dashboard, never committed.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      # The deployed frontend origin(s), comma-separated.
+      - key: CORS_ORIGINS
+        sync: false

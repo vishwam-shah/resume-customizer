@@ -2,7 +2,7 @@
 
 import { ArrowRight, Flask, WarningOctagon } from "@phosphor-icons/react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button, Spinner } from "@/components/ui/Button";
 import type { ParsedFile } from "@/lib/api/types";
 import { checkJobDescription } from "@/lib/limits";
 import { sampleJobDescription, sampleResumeName, sampleResumeUrl } from "@/lib/sampleData";
@@ -10,6 +10,7 @@ import { JobDescriptionField } from "../jobInput/JobDescriptionField";
 import { ResumeDropzone } from "../resumeUpload/ResumeDropzone";
 import { useResumeUpload } from "../resumeUpload/useResumeUpload";
 import { TailorOptionsPanel } from "../tailor/TailorOptionsPanel";
+import { useServerWarmup } from "./useServerWarmup";
 import { useWorkspace } from "./WorkspaceProvider";
 
 type FieldErrors = { job: string | null; resume: string | null };
@@ -66,6 +67,7 @@ export function InputsView() {
   }
 
   const hasPreviousResults = state.versions.length > 0;
+  const serverStatus = useServerWarmup();
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 pt-10 pb-16 sm:px-6 sm:pt-14">
@@ -96,6 +98,28 @@ export function InputsView() {
           ) : null}
         </div>
       </div>
+
+      {serverStatus === "waking" || serverStatus === "unreachable" ? (
+        <p
+          role="status"
+          className="mt-8 flex items-start gap-3 rounded-[var(--radius-card)] border border-border bg-surface p-4 text-sm"
+        >
+          {serverStatus === "waking" ? (
+            <Spinner className="mt-0.5 shrink-0 text-muted" />
+          ) : (
+            <WarningOctagon
+              aria-hidden
+              weight="fill"
+              className="mt-0.5 size-4 shrink-0 text-removed"
+            />
+          )}
+          <span>
+            {serverStatus === "waking"
+              ? "Starting the server. On the free plan it sleeps when idle and takes about 30 seconds to wake. You can fill in the form meanwhile."
+              : "We can't reach the server right now. Check your connection; your inputs are saved here."}
+          </span>
+        </p>
+      ) : null}
 
       {runError ? (
         <div
