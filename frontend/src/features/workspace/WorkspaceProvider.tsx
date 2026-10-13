@@ -9,7 +9,9 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from "react";
+import { saveRun } from "@/features/history/actions";
 import { ApiError, isAbort } from "@/lib/api/client";
 import { streamEvents } from "@/lib/api/sse";
 import type {
@@ -21,6 +23,7 @@ import type {
   TailorRequest,
   TailorResult,
 } from "@/lib/api/types";
+import { useSession } from "@/lib/authClient";
 import {
   initialState,
   type Version,
@@ -29,10 +32,14 @@ import {
   workspaceReducer,
 } from "./workspaceState";
 
-const storageKey = "tailor.workspace.v1";
+export const storageKey = "tailor.workspace.v1";
+
+export type SaveStatus = "local" | "saving" | "saved" | "error";
 
 type WorkspaceContextValue = {
   state: WorkspaceState;
+  /** "local": signed out, kept in this browser only. */
+  saveStatus: SaveStatus;
   dispatch: (action: WorkspaceAction) => void;
   startRun: () => Promise<void>;
   cancelRun: () => void;
@@ -83,6 +90,32 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     const id = window.setTimeout(() => persist(state), 300);
     return () => window.clearTimeout(id);
   }, [state]);
+
+  // Signed in: mirror the session to history, debounced, whenever it changes.
+  const { data: session } = useSession();
+  const signedIn = Boolean(session?.user);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("local");
+  const { sessionId, versions, jobDescription, file, original, analysis, scoresBefore } = state;
+  useEffect(() => {
+    if (!signedIn) {
+      setSaveStatus("local");
+      return;
+    }
+    if (!sessionId || versions.length === 0 || !file || !analysis) return;
+    setSaveStatus("saving");
+    const id = window.setTimeout(async () => {
+      try {
+        const result = await saveRun({
+          id: sessionId,
+          data: { jobDescription, file, original, analysis, scoresBefore, versions },
+        });
+        setSaveStatus(result.ok ? "saved" : "error");
+      } catch {
+        setSaveStatus("error");
+      }
+    }, 1200);
+    return () => window.clearTimeout(id);
+  }, [signedIn, sessionId, versions, jobDescription, file, original, analysis, scoresBefore]);
 
   const cancelRun = useCallback(() => {
     controller.current?.abort();
@@ -159,8 +192,8 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ state, dispatch, startRun, cancelRun }),
-    [state, startRun, cancelRun],
+    () => ({ state, saveStatus, dispatch, startRun, cancelRun }),
+    [state, saveStatus, startRun, cancelRun],
   );
   return <WorkspaceContext value={value}>{children}</WorkspaceContext>;
 }

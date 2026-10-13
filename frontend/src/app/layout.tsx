@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
+import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SkipLink } from "@/components/layout/SkipLink";
 import { ThemeScript } from "@/components/layout/ThemeScript";
+import { OfflineBanner } from "@/features/pwa/OfflineBanner";
 import { AppProviders } from "./AppProviders";
 import "./globals.css";
 
@@ -25,6 +27,8 @@ export const metadata: Metadata = {
   description:
     "Paste a job description, upload your resume, and get a version tailored to the role. Every change is grounded in what you actually did.",
   applicationName: "Tailor",
+  appleWebApp: { capable: true, title: "Tailor", statusBarStyle: "black-translucent" },
+  formatDetection: { telephone: false },
   openGraph: {
     title: "Tailor · Resume customizer",
     description: "Tailor your resume to any job description, honestly.",
@@ -37,7 +41,7 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#ffffff" },
     { media: "(prefers-color-scheme: dark)", color: "#09090b" },
   ],
-  colorScheme: "light dark",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -53,11 +57,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-dvh flex-col">
         <AppProviders>
           <SkipLink />
+          <OfflineBanner />
           <SiteHeader />
           <main id="main" tabIndex={-1} className="flex-1 outline-none">
             {children}
           </main>
           <SiteFooter />
+          <MobileTabBar />
         </AppProviders>
       </body>
     </html>

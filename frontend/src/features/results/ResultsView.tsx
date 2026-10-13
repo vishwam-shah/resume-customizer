@@ -19,6 +19,7 @@ import { Button, buttonClasses } from "@/components/ui/Button";
 import type { ResumeDoc } from "@/lib/api/types";
 import { formatDuration, pluralize } from "@/lib/format";
 import { CoverLetterPanel } from "../coverLetter/CoverLetterPanel";
+import { SaveIndicator } from "../history/SaveIndicator";
 import { summarizeOptions, TailorOptionsPanel } from "../tailor/TailorOptionsPanel";
 import { useWorkspace } from "../workspace/WorkspaceProvider";
 import { activeVersion, maxVersions } from "../workspace/workspaceState";
@@ -34,7 +35,7 @@ const tabClass =
   "relative z-10 flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[calc(var(--radius-control)-2px)] px-4 font-medium text-muted text-sm hover:text-fg data-[active]:text-fg";
 
 export function ResultsView() {
-  const { state, dispatch } = useWorkspace();
+  const { state, saveStatus, dispatch } = useWorkspace();
   const version = activeVersion(state);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const toasts = Toast.useToastManager();
@@ -102,9 +103,12 @@ export function ResultsView() {
             Tailored for {analysis.title}
             {analysis.company ? <span className="text-muted"> at {analysis.company}</span> : null}
           </h1>
-          <p className="mt-2 text-muted text-sm">
-            Done in {formatDuration(version.durationMs)} with {version.model.split(":").at(-1)}
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1">
+            <p className="text-muted text-sm">
+              Done in {formatDuration(version.durationMs)} with {version.model.split(":").at(-1)}
+            </p>
+            <SaveIndicator status={saveStatus} />
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <NewVersionDialog />

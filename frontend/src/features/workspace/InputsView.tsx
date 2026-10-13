@@ -188,15 +188,12 @@ export function InputsView() {
           />
         </div>
 
-        <div className="sticky bottom-0 z-10 -mx-4 mt-6 border-border border-t bg-bg/90 px-4 py-4 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
+        <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] z-10 md:bottom-0 -mx-4 mt-6 border-border border-t bg-bg/90 px-4 py-4 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
           <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <p className="hidden text-subtle text-sm sm:block">
-              <kbd className="font-mono">Ctrl</kbd> + <kbd className="font-mono">Enter</kbd> to
-              submit from the job description
-            </p>
             <Button
               type="submit"
               size="lg"
+              title="Shortcut: Ctrl + Enter (⌘ + Enter on Mac) in the job description"
               disabled={Boolean(uploadingName)}
               icon={<ArrowRight aria-hidden className="size-5" />}
               className="sm:min-w-56"

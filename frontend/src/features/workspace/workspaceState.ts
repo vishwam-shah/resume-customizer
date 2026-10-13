@@ -46,6 +46,8 @@ export type WorkspaceState = {
   };
   versions: Version[];
   activeVersionId: string | null;
+  /** Identifies this job + resume session in saved history. */
+  sessionId: string | null;
   view: "inputs" | "results";
 };
 
@@ -62,6 +64,7 @@ export const initialState: WorkspaceState = {
   run: { status: "idle", stages: idleStages(), error: null },
   versions: [],
   activeVersionId: null,
+  sessionId: null,
   view: "inputs",
 };
 
@@ -94,6 +97,7 @@ const clearDerived = (state: WorkspaceState): WorkspaceState => ({
   scoresBefore: null,
   versions: [],
   activeVersionId: null,
+  sessionId: null,
   view: "inputs",
 });
 
@@ -127,7 +131,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       if (state.original) stages.reading = "done";
       if (state.analysis) stages.analyzing = "done";
       const base = inputsChanged
-        ? { ...state, versions: [], activeVersionId: null, scoresBefore: null }
+        ? { ...state, versions: [], activeVersionId: null, scoresBefore: null, sessionId: null }
         : state;
       return { ...base, run: { status: "running", stages, error: null } };
     }
@@ -150,6 +154,7 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       const versions = [...state.versions, action.version].slice(-maxVersions);
       return {
         ...state,
+        sessionId: state.sessionId ?? crypto.randomUUID(),
         versions,
         activeVersionId: action.version.id,
         run: { status: "idle", stages: idleStages(), error: null },

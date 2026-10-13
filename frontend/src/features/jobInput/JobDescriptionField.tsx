@@ -61,6 +61,7 @@ export function JobDescriptionField({ value, onChange, error, onSubmitShortcut }
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
+        aria-keyshortcuts="Control+Enter Meta+Enter"
         rows={14}
         spellCheck={false}
         placeholder={
