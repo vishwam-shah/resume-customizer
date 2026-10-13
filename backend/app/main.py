@@ -11,6 +11,8 @@ import logging
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.openapi.utils import get_openapi
+from pydantic.json_schema import models_json_schema
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.core.config import settings
@@ -20,6 +22,8 @@ from app.core.schemas import CamelModel
 from app.features.cover_letter.router import router as cover_letter_router
 from app.features.export.router import router as export_router
 from app.features.resume.router import router as resume_router
+from app.features.tailor.events import DoneEvent, ErrorBody, StageEvent
+from app.features.tailor.models import TailorResult
 from app.features.tailor.router import router as tailor_router
 from app.llm import router as llm
 
@@ -78,7 +82,27 @@ def create_app() -> FastAPI:
     for feature in (resume_router, tailor_router, cover_letter_router, export_router):
         api.include_router(feature)
     app.include_router(api)
+    _register_stream_schemas(app)
     return app
+
+
+def _register_stream_schemas(app: FastAPI) -> None:
+    """Add SSE payload models to the OpenAPI components so clients can type them."""
+    stream_models = [TailorResult, StageEvent, DoneEvent, ErrorBody]
+
+    def openapi() -> dict:
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+        _, defs = models_json_schema(
+            [(m, "serialization") for m in stream_models],
+            ref_template="#/components/schemas/{model}",
+        )
+        schema.setdefault("components", {}).setdefault("schemas", {}).update(defs["$defs"])
+        app.openapi_schema = schema
+        return schema
+
+    app.openapi = openapi
 
 
 app = create_app()

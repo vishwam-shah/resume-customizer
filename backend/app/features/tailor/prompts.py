@@ -70,7 +70,9 @@ entry must equal the original.
 important first). For each: the keyword, the section it would fit, and a concrete, honest \
 suggestion phrased as a question or conditional ("If you used Kafka for the event pipeline at \
 Acme, mention it in that bullet."). Never assume the candidate has it.
-- changeNotes: 3 to 6 short notes on the most important changes and why they help for this job.
+- changeNotes: 3 to 6 short notes, written for the candidate in plain language, on the most \
+important changes and why they help for this job. Never mention JSON fields, ids or these \
+instructions (no "termEvidence", "exp-1", "rule 5").
 
 STYLE
 - No em dashes or en dashes; use commas, colons or separate sentences.

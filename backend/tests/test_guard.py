@@ -118,3 +118,28 @@ def test_unrequested_sections_are_untouched():
 def test_clean_dashes():
     assert clean_dashes("Led a team \u2014 shipped fast") == "Led a team, shipped fast"
     assert clean_dashes("2021\u20132023") == "2021-2023"
+
+
+def test_revert_after_reorder_never_duplicates_bullets():
+    # Regression: the rewritten list is reordered and its second bullet is
+    # reverted; it must revert to its own source, not a bullet already used.
+    original = make_resume()
+    first, second = original.experience[0].bullets
+    out = _output(
+        experience=[
+            TailoredEntry(
+                id="exp-1",
+                bullets=[second, "Built a FastAPI service handling 9000 requests per minute"],
+            )
+        ]
+    )
+    doc, _, _ = apply_output(original, out, make_job(), all_sections)
+    assert doc.experience[0].bullets == [second, first]
+
+
+def test_duplicate_bullets_from_model_are_collapsed():
+    original = make_resume()
+    first, second = original.experience[0].bullets
+    out = _output(experience=[TailoredEntry(id="exp-1", bullets=[first, first])])
+    doc, _, _ = apply_output(original, out, make_job(), all_sections)
+    assert sorted(doc.experience[0].bullets) == sorted([first, second])

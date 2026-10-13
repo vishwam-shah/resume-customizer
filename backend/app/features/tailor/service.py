@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import time
 from collections.abc import AsyncIterator
+from typing import Literal
 
 from fastapi.sse import ServerSentEvent
 
@@ -28,12 +29,13 @@ from app.features.scoring.ats import ats_score
 from app.features.scoring.match import match_score
 from app.features.scoring.models import Scores
 from app.features.tailor import guard, prompts
+from app.features.tailor.events import DoneEvent, StageEvent, StageId
 from app.features.tailor.models import TailorOutput, TailorRequest, TailorResult
 from app.llm import router
 
 
-def _stage(stage_id: str, status: str) -> ServerSentEvent:
-    return ServerSentEvent(data={"id": stage_id, "status": status}, event="stage")
+def _stage(stage_id: StageId, status: Literal["active", "done"]) -> ServerSentEvent:
+    return ServerSentEvent(data=StageEvent(id=stage_id, status=status), event="stage")
 
 
 def score(doc: ResumeDoc, analysis: JobAnalysis) -> Scores:
@@ -116,7 +118,7 @@ async def run_pipeline(req: TailorRequest) -> AsyncIterator[ServerSentEvent]:
         yield ServerSentEvent(data=result, event="result")
         yield _stage("checking", "done")
         yield ServerSentEvent(
-            data={"model": model, "durationMs": round((time.monotonic() - started) * 1000)},
+            data=DoneEvent(model=model, duration_ms=round((time.monotonic() - started) * 1000)),
             event="done",
         )
     except AppError as e:

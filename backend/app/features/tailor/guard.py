@@ -42,6 +42,30 @@ def _similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
+def pair_bullets(original: list[str], rewritten: list[str]) -> list[int]:
+    """For each rewritten bullet, the index of the original it came from.
+
+    Bullets get reordered, so pairing is global: the most similar pairs are
+    matched first, one-to-one. (Greedy-in-order pairing lets an early bullet
+    steal a later one's source, which duplicates text on revert.)
+    """
+    # Best matches first; ties resolve in document order.
+    scored = sorted(
+        (
+            (-_similarity(o, r), ri, oi)
+            for ri, r in enumerate(rewritten)
+            for oi, o in enumerate(original)
+        )
+    )
+    pairs = [-1] * len(rewritten)
+    used: set[int] = set()
+    for _, ri, oi in scored:
+        if pairs[ri] == -1 and oi not in used:
+            pairs[ri] = oi
+            used.add(oi)
+    return pairs
+
+
 class _Guard:
     def __init__(
         self, original: ResumeDoc, analysis: JobAnalysis, evidence: list[TermEvidence]
@@ -132,22 +156,28 @@ class _Guard:
         entry_low = " ".join(
             [*original.bullets, getattr(original, "role", ""), getattr(original, "name", "")]
         ).lower()
-        source = list(original.bullets)
+        rewritten = [clean_dashes(b) for b in tailored.bullets[: len(original.bullets)]]
+        pairs = pair_bullets(original.bullets, rewritten)
         result: list[str] = []
+        seen: set[str] = set()
+        dropped: set[int] = set()
         reverted = 0
-        for raw in tailored.bullets[: len(source)]:
-            bullet = clean_dashes(raw)
-            closest = max(source, key=lambda b: _similarity(b, bullet)) if source else None
-            if closest is not None and (
-                self.invented_numbers(bullet) or self.unsupported_terms(bullet, entry_low)
-            ):
-                bullet = closest
+        for bullet, source_index in zip(rewritten, pairs, strict=True):
+            if self.invented_numbers(bullet) or self.unsupported_terms(bullet, entry_low):
+                bullet = original.bullets[source_index]
                 reverted += 1
-            if closest is not None:
-                source.remove(closest)
+            key = bullet.strip().lower()
+            if key in seen:
+                dropped.add(source_index)  # a repeated line; its source still needs a home
+                continue
+            seen.add(key)
             result.append(bullet)
         # A dropped bullet is lost work history; put any unmatched originals back.
-        result += source
+        for index, text in enumerate(original.bullets):
+            unused = index not in pairs or index in dropped
+            if unused and text.strip().lower() not in seen:
+                seen.add(text.strip().lower())
+                result.append(text)
         if reverted:
             self.flags.append(
                 Flag(

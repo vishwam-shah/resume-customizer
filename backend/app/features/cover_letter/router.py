@@ -16,6 +16,7 @@ from app.core.rate_limit import limiter
 from app.core.schemas import CamelModel
 from app.features.job.models import JobAnalysis
 from app.features.resume.models import ResumeDoc
+from app.features.tailor.events import DoneEvent
 from app.llm import router as llm
 
 router = APIRouter(tags=["coverLetter"])
@@ -70,6 +71,6 @@ async def cover_letter(
                 return
             text = chunk.replace("\u2014", ", ").replace("\u2013", "-")
             yield ServerSentEvent(data=text, event="token")
-        yield ServerSentEvent(data={"model": llm.active_model()}, event="done")
+        yield ServerSentEvent(data=DoneEvent(model=llm.active_model()), event="done")
     except AppError as e:
         yield ServerSentEvent(data=e.to_dict(), event="error")

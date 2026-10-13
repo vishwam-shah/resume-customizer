@@ -1,26 +1,213 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens: minimal mono.
+ * Every text pair below meets WCAG AAA (7:1) except --subtle, which meets AA
+ * (4.5:1+) and is reserved for non-essential meta (counts, timestamps).
+ * Borders meant to identify controls (--border-strong) meet 3:1.
+ * Ratios are verified in tests/a11y/contrast.test.ts.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #fafafa;
+  --surface-2: #f4f4f5;
+  --fg: #09090b;
+  --muted: #52525b;
+  --subtle: #68686f;
+  --border: #e4e4e7;
+  --border-strong: #8b8b94;
+  --inverse-fg: #ffffff;
+  --added: #14532d;
+  --added-bg: #f0fdf4;
+  --removed: #991b1b;
+  --removed-bg: #fef2f2;
+  --danger-solid: #991b1b;
+  --on-danger: #ffffff;
+  --warn: #713f12;
+  --warn-bg: #fefce8;
+  --focus: #09090b;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px -12px rgb(0 0 0 / 0.12);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* Without JS, follow the OS; with JS, the inline theme script sets data-theme. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #09090b;
+    --surface: #111113;
+    --surface-2: #18181b;
+    --fg: #fafafa;
+    --muted: #adadb5;
+    --subtle: #8b8b94;
+    --border: #27272a;
+    --border-strong: #71717a;
+    --inverse-fg: #09090b;
+    --added: #86efac;
+    --added-bg: #0c1f14;
+    --removed: #fca5a5;
+    --removed-bg: #2a1111;
+    --warn: #fde047;
+    --warn-bg: #221d05;
+    --focus: #fafafa;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px -12px rgb(0 0 0 / 0.7);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #09090b;
+  --surface: #111113;
+  --surface-2: #18181b;
+  --fg: #fafafa;
+  --muted: #adadb5;
+  --subtle: #8b8b94;
+  --border: #27272a;
+  --border-strong: #71717a;
+  --inverse-fg: #09090b;
+  --added: #86efac;
+  --added-bg: #0c1f14;
+  --removed: #fca5a5;
+  --removed-bg: #2a1111;
+  --warn: #fde047;
+  --warn-bg: #221d05;
+  --focus: #fafafa;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 24px -12px rgb(0 0 0 / 0.7);
+}
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-inverse-fg: var(--inverse-fg);
+  --color-added: var(--added);
+  --color-added-bg: var(--added-bg);
+  --color-removed: var(--removed);
+  --color-removed-bg: var(--removed-bg);
+  --color-danger-solid: var(--danger-solid);
+  --color-on-danger: var(--on-danger);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;
+
+  --shadow-card: var(--shadow);
+  --radius-control: 0.625rem;
+  --radius-card: 1rem;
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-padding-top: 5rem; /* keeps focused/anchored content clear of the sticky header (WCAG 2.4.11) */
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+  }
+
+  /* One focus indicator, one ring: never a border plus an outline plus a halo. */
+  :where(a, button, summary, [tabindex], [role="checkbox"], [role="radio"]):focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+
+  /* Text fields: the ring replaces the border (offset -1px sits on top of it). */
+  :where(input, textarea, select):focus-visible,
+  :where(input, textarea, select):focus {
+    outline: 2px solid var(--focus);
+    outline-offset: -1px;
+  }
+
+  /* Elements that only receive focus programmatically (headings, alerts). */
+  :where([tabindex="-1"]):focus {
+    outline: none;
+  }
+
+  /* Tailwind v4 resets buttons to the default cursor; anything clickable gets a pointer. */
+  :where(
+    button:not(:disabled),
+    [role="button"]:not([aria-disabled="true"]),
+    [role="tab"],
+    [role="menuitem"],
+    [role="menuitemradio"],
+    [role="menuitemcheckbox"],
+    [role="option"],
+    [role="checkbox"],
+    [role="radio"],
+    label:has(input:not(:disabled)),
+    label:has([role="checkbox"]),
+    label:has([role="radio"]),
+    summary,
+    select
+  ) {
+    cursor: pointer;
+  }
+
+  :where(button:disabled, [aria-disabled="true"], [data-disabled]) {
+    cursor: not-allowed;
+  }
+
+  ::selection {
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  /* Native form controls inherit type; avoids iOS zoom on focus (>=16px). */
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+
+  ins,
+  del {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Respect the OS setting; Motion components also read it via MotionConfig. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Windows High Contrast / forced colors: keep borders and focus visible. */
+@media (forced-colors: active) {
+  :where(a, button, input, textarea, [tabindex]):focus-visible {
+    outline: 2px solid CanvasText;
+    box-shadow: none;
+  }
+  [data-surface] {
+    border: 1px solid CanvasText;
+  }
 }

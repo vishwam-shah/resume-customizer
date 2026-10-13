@@ -1,0 +1,1311 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Resume Customizer API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object",
+                  "title": "Response Health Api V1 Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meta": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "Meta",
+        "operationId": "meta_api_v1_meta_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Meta"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/resumes/parse": {
+      "post": {
+        "tags": [
+          "resume"
+        ],
+        "summary": "Parse",
+        "description": "Validate an uploaded PDF/DOCX and extract its text. Nothing is stored.",
+        "operationId": "parse_api_v1_resumes_parse_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_parse_api_v1_resumes_parse_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParsedFile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tailor": {
+      "post": {
+        "tags": [
+          "tailor"
+        ],
+        "summary": "Tailor",
+        "description": "Tailor a resume to a job. Streams `stage`, `resume`, `analysis`,\n`scoresBefore`, `result`, `done` and `error` events.",
+        "operationId": "tailor_api_v1_tailor_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TailorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/cover-letter": {
+      "post": {
+        "tags": [
+          "coverLetter"
+        ],
+        "summary": "Cover Letter",
+        "description": "Streams `token` events with text chunks, then `done` (or `error`).",
+        "operationId": "cover_letter_api_v1_cover_letter_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CoverLetterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "string"
+                    },
+                    "event": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "retry": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/export": {
+      "post": {
+        "tags": [
+          "export"
+        ],
+        "summary": "Export",
+        "description": "Render the resume or cover letter as PDF, DOCX or plain text.",
+        "operationId": "export_api_v1_export_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_parse_api_v1_resumes_parse_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_parse_api_v1_resumes_parse_post"
+      },
+      "Contact": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "headline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headline"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ContactLink"
+            },
+            "title": "Links",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "headline",
+          "email",
+          "phone",
+          "location",
+          "links"
+        ],
+        "title": "Contact",
+        "type": "object"
+      },
+      "ContactLink": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "url"
+        ],
+        "title": "ContactLink",
+        "type": "object"
+      },
+      "CoverLetterRequest": {
+        "properties": {
+          "jobDescription": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Jobdescription"
+          },
+          "resume": {
+            "$ref": "#/components/schemas/ResumeDoc"
+          },
+          "analysis": {
+            "$ref": "#/components/schemas/JobAnalysis"
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "standard"
+            ],
+            "title": "Length",
+            "default": "standard"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobDescription",
+          "resume",
+          "analysis"
+        ],
+        "title": "CoverLetterRequest"
+      },
+      "EducationItem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "degree": {
+            "title": "Degree",
+            "type": "string"
+          },
+          "school": {
+            "title": "School",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "details": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Details",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "degree",
+          "school",
+          "location",
+          "start",
+          "end",
+          "details"
+        ],
+        "title": "EducationItem",
+        "type": "object"
+      },
+      "ExperienceItem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "company": {
+            "title": "Company",
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "bullets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Bullets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "company",
+          "location",
+          "start",
+          "end",
+          "bullets"
+        ],
+        "title": "ExperienceItem",
+        "type": "object"
+      },
+      "ExportRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "resume",
+              "coverLetter"
+            ],
+            "title": "Kind",
+            "default": "resume"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "docx",
+              "txt"
+            ],
+            "title": "Format"
+          },
+          "resume": {
+            "$ref": "#/components/schemas/ResumeDoc"
+          },
+          "coverLetter": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coverletter"
+          }
+        },
+        "type": "object",
+        "required": [
+          "format",
+          "resume"
+        ],
+        "title": "ExportRequest"
+      },
+      "ExtraSection": {
+        "description": "Anything else the resume carries: certifications, awards, languages.",
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "title",
+          "items"
+        ],
+        "title": "ExtraSection",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "JobAnalysis": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company"
+          },
+          "seniority": {
+            "type": "string",
+            "enum": [
+              "intern",
+              "entry",
+              "mid",
+              "senior",
+              "lead",
+              "principal",
+              "unspecified"
+            ],
+            "title": "Seniority"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "mustHaveSkills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Musthaveskills"
+          },
+          "niceToHaveSkills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Nicetohaveskills"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Keywords"
+          },
+          "responsibilities": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Responsibilities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "company",
+          "seniority",
+          "summary",
+          "mustHaveSkills",
+          "niceToHaveSkills",
+          "keywords",
+          "responsibilities"
+        ],
+        "title": "JobAnalysis"
+      },
+      "Meta": {
+        "properties": {
+          "maxUploadBytes": {
+            "type": "integer",
+            "title": "Maxuploadbytes"
+          },
+          "maxResumePages": {
+            "type": "integer",
+            "title": "Maxresumepages"
+          },
+          "minJobDescriptionChars": {
+            "type": "integer",
+            "title": "Minjobdescriptionchars"
+          },
+          "maxJobDescriptionChars": {
+            "type": "integer",
+            "title": "Maxjobdescriptionchars"
+          },
+          "acceptedTypes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Acceptedtypes"
+          },
+          "model": {
+            "type": "string",
+            "title": "Model"
+          }
+        },
+        "type": "object",
+        "required": [
+          "maxUploadBytes",
+          "maxResumePages",
+          "minJobDescriptionChars",
+          "maxJobDescriptionChars",
+          "acceptedTypes",
+          "model"
+        ],
+        "title": "Meta",
+        "description": "Limits the UI validates against, so client and server never disagree."
+      },
+      "ParsedFile": {
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "title": "Sizebytes"
+          },
+          "fileType": {
+            "type": "string",
+            "title": "Filetype"
+          },
+          "pageCount": {
+            "type": "integer",
+            "title": "Pagecount"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "wordCount": {
+            "type": "integer",
+            "title": "Wordcount"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fileName",
+          "sizeBytes",
+          "fileType",
+          "pageCount",
+          "text",
+          "wordCount",
+          "warnings"
+        ],
+        "title": "ParsedFile",
+        "description": "What the upload endpoint returns: the file facts plus extracted text."
+      },
+      "ProjectItem": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "bullets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Bullets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "link",
+          "bullets"
+        ],
+        "title": "ProjectItem",
+        "type": "object"
+      },
+      "ResumeDoc": {
+        "properties": {
+          "contact": {
+            "$ref": "#/components/schemas/Contact"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/SkillGroup"
+            },
+            "title": "Skills",
+            "type": "array"
+          },
+          "experience": {
+            "items": {
+              "$ref": "#/components/schemas/ExperienceItem"
+            },
+            "title": "Experience",
+            "type": "array"
+          },
+          "projects": {
+            "items": {
+              "$ref": "#/components/schemas/ProjectItem"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "education": {
+            "items": {
+              "$ref": "#/components/schemas/EducationItem"
+            },
+            "title": "Education",
+            "type": "array"
+          },
+          "extras": {
+            "items": {
+              "$ref": "#/components/schemas/ExtraSection"
+            },
+            "title": "Extras",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contact",
+          "summary",
+          "skills",
+          "experience",
+          "projects",
+          "education",
+          "extras"
+        ],
+        "title": "ResumeDoc",
+        "type": "object"
+      },
+      "SkillGroup": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "items"
+        ],
+        "title": "SkillGroup",
+        "type": "object"
+      },
+      "TailorRequest": {
+        "properties": {
+          "jobDescription": {
+            "type": "string",
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Jobdescription"
+          },
+          "resumeText": {
+            "type": "string",
+            "maxLength": 60000,
+            "minLength": 1,
+            "title": "Resumetext"
+          },
+          "resume": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResumeDoc"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/JobAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sections": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "summary",
+                "skills",
+                "experience",
+                "projects"
+              ]
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Sections"
+          },
+          "tone": {
+            "type": "string",
+            "enum": [
+              "balanced",
+              "confident",
+              "concise"
+            ],
+            "title": "Tone",
+            "default": "balanced"
+          }
+        },
+        "type": "object",
+        "required": [
+          "jobDescription",
+          "resumeText"
+        ],
+        "title": "TailorRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "AtsScore": {
+        "properties": {
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          },
+          "components": {
+            "items": {
+              "$ref": "#/components/schemas/ScoreComponent"
+            },
+            "title": "Components",
+            "type": "array"
+          },
+          "issues": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Issues",
+            "type": "array"
+          }
+        },
+        "required": [
+          "score",
+          "components",
+          "issues"
+        ],
+        "title": "AtsScore",
+        "type": "object"
+      },
+      "DoneEvent": {
+        "properties": {
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "durationMs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Durationms"
+          }
+        },
+        "required": [
+          "model"
+        ],
+        "title": "DoneEvent",
+        "type": "object"
+      },
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "hint": {
+            "title": "Hint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "hint"
+        ],
+        "title": "ErrorBody",
+        "type": "object"
+      },
+      "Flag": {
+        "description": "Something the guard changed or wants the user to double-check.",
+        "properties": {
+          "section": {
+            "enum": [
+              "summary",
+              "skills",
+              "experience",
+              "projects"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "itemId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Itemid"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "itemId",
+          "message"
+        ],
+        "title": "Flag",
+        "type": "object"
+      },
+      "KeywordSuggestion": {
+        "properties": {
+          "keyword": {
+            "title": "Keyword",
+            "type": "string"
+          },
+          "section": {
+            "enum": [
+              "summary",
+              "skills",
+              "experience",
+              "projects"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "suggestion": {
+            "title": "Suggestion",
+            "type": "string"
+          }
+        },
+        "required": [
+          "keyword",
+          "section",
+          "suggestion"
+        ],
+        "title": "KeywordSuggestion",
+        "type": "object"
+      },
+      "MatchScore": {
+        "properties": {
+          "score": {
+            "title": "Score",
+            "type": "integer"
+          },
+          "matchedMustHave": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Matchedmusthave",
+            "type": "array"
+          },
+          "missingMustHave": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missingmusthave",
+            "type": "array"
+          },
+          "matchedKeywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Matchedkeywords",
+            "type": "array"
+          },
+          "missingKeywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missingkeywords",
+            "type": "array"
+          },
+          "matchedNiceToHave": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Matchednicetohave",
+            "type": "array"
+          },
+          "missingNiceToHave": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missingnicetohave",
+            "type": "array"
+          }
+        },
+        "required": [
+          "score",
+          "matchedMustHave",
+          "missingMustHave",
+          "matchedKeywords",
+          "missingKeywords",
+          "matchedNiceToHave",
+          "missingNiceToHave"
+        ],
+        "title": "MatchScore",
+        "type": "object"
+      },
+      "ScoreComponent": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "points": {
+            "title": "Points",
+            "type": "number"
+          },
+          "maxPoints": {
+            "title": "Maxpoints",
+            "type": "number"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "points",
+          "maxPoints",
+          "detail"
+        ],
+        "title": "ScoreComponent",
+        "type": "object"
+      },
+      "Scores": {
+        "properties": {
+          "match": {
+            "$ref": "#/components/schemas/MatchScore"
+          },
+          "ats": {
+            "$ref": "#/components/schemas/AtsScore"
+          }
+        },
+        "required": [
+          "match",
+          "ats"
+        ],
+        "title": "Scores",
+        "type": "object"
+      },
+      "StageEvent": {
+        "properties": {
+          "id": {
+            "enum": [
+              "reading",
+              "analyzing",
+              "scoring",
+              "tailoring",
+              "checking"
+            ],
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "done"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "StageEvent",
+        "type": "object"
+      },
+      "TailorResult": {
+        "properties": {
+          "resume": {
+            "$ref": "#/components/schemas/ResumeDoc"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/KeywordSuggestion"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "flags": {
+            "items": {
+              "$ref": "#/components/schemas/Flag"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "scores": {
+            "$ref": "#/components/schemas/Scores"
+          }
+        },
+        "required": [
+          "resume",
+          "suggestions",
+          "notes",
+          "flags",
+          "scores"
+        ],
+        "title": "TailorResult",
+        "type": "object"
+      }
+    }
+  }
+}
