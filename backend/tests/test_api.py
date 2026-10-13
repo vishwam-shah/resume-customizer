@@ -124,3 +124,32 @@ def test_export_cover_letter_requires_text():
         "/api/v1/export", json={"kind": "coverLetter", "format": "pdf", "resume": resume}
     )
     assert r.json()["error"]["code"] == "emptyCoverLetter"
+
+
+async def test_keep_awake_pings_public_health_url(monkeypatch):
+    import asyncio
+
+    from app.core import keep_awake
+
+    calls: list[str] = []
+
+    class FakeClient:
+        def __init__(self, **_):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def get(self, url):
+            calls.append(url)
+            return type("R", (), {"status_code": 200})()
+
+    monkeypatch.setattr(keep_awake.httpx, "AsyncClient", FakeClient)
+    monkeypatch.setattr(keep_awake.settings, "render_external_url", "https://api.example.com/")
+    monkeypatch.setattr(keep_awake.settings, "self_ping_minutes", 0.001)  # 60 ms
+    async with keep_awake.keep_awake(None):
+        await asyncio.sleep(0.2)
+    assert calls and calls[0] == "https://api.example.com/api/v1/health"

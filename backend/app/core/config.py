@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     max_job_description_chars: int = 20_000
     min_resume_chars: int = 300
 
+    # Keep-awake for free hosting: ping our own public URL every N minutes
+    # (0 disables). Render provides RENDER_EXTERNAL_URL automatically.
+    self_ping_url: str = ""
+    render_external_url: str = ""
+    self_ping_minutes: float = 5
+
     rate_limit_tailor: str = Field(default="12/minute")
     rate_limit_default: str = Field(default="60/minute")
 

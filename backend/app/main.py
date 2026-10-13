@@ -17,6 +17,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.core.config import settings
 from app.core.errors import install_error_handlers
+from app.core.keep_awake import keep_awake
 from app.core.rate_limit import limiter
 from app.core.schemas import CamelModel
 from app.features.cover_letter.router import router as cover_letter_router
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
         title="Resume Customizer API",
         version="1.0.0",
         docs_url=None if settings.is_production else "/docs",
+        lifespan=keep_awake,
         redoc_url=None,
     )
     app.state.limiter = limiter

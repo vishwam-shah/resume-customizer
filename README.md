@@ -3,7 +3,7 @@
 Paste a job description, upload your resume (PDF or DOCX), and get a version tailored to the role, with every change traceable to something you actually did.
 
 **Live app:** https://resume-customizer-lac.vercel.app
-**API:** https://resume-customizer-api.onrender.com/api/v1/health (free tier: the first request after idle takes ~30 s to wake; the app shows this)
+**API:** https://resume-customizer-api-m69l.onrender.com/api/v1/health
 
 ![Results](docs/screenshots/results.png)
 
@@ -172,7 +172,7 @@ After changing backend models, run `uv run python scripts/export_openapi.py` and
 
 ## Known limitations and trade-offs
 
-- **Free tiers.** Render sleeps after 15 minutes idle, so the first request takes ~30 s; the UI says so and pings the API on load. Groq and Gemini free quotas are small; the multi-model chain absorbs bursts, but heavy use can still hit "busy".
+- **Free tiers.** Render sleeps a free service after 15 minutes idle. The API pings its own public URL every 5 minutes to stay awake, with a GitHub Actions cron as a backup; if it does sleep, the UI explains the ~30 s wake-up. Groq and Gemini free quotas are small; the multi-model chain absorbs bursts, but heavy use can still hit "busy".
 - **Scores are ours.** Match and ATS scores are transparent, deterministic heuristics (keyword coverage, sections, contact details, quantified impact). No tool can see inside a specific employer's ATS.
 - **Layout isn't preserved.** The tailored resume is re-rendered in a clean single-column ATS-safe layout. That is deliberate for ATS parsing, but it means the original visual design is not kept.
 - **No OCR.** Scanned PDFs are detected and rejected with instructions, rather than read.
