@@ -2,6 +2,7 @@
 
 import { Toggle } from "@base-ui/react/toggle";
 import { ArrowArcLeft, ArrowsDownUp, Check } from "@phosphor-icons/react";
+import { diffWords } from "diff";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/Button";
 import type { ResumeDoc, Section } from "@/lib/api/types";
@@ -113,6 +114,30 @@ export function ChangesView({ original, tailored, rejected, onToggle, onSetAll }
   );
 }
 
+/** True when less than half the original wording survives: an inline diff would be noise. */
+function isRewrite({ before, after }: Change): boolean {
+  const kept = diffWords(before, after)
+    .filter((part) => !part.added && !part.removed)
+    .reduce((n, part) => n + part.value.trim().length, 0);
+  return kept / Math.max(1, before.replace(/\s+/g, "").length) < 0.5;
+}
+
+/** Heavy rewrites and restructured lists read better as two clean blocks. */
+function BeforeAfter({ before, after }: { before: string; after: string }) {
+  return (
+    <div className="mt-3 grid gap-3 md:grid-cols-2">
+      <div className="rounded-[var(--radius-control)] bg-surface p-3">
+        <p className="font-medium text-muted text-xs uppercase tracking-wider">Before</p>
+        <p className="mt-1.5 whitespace-pre-line text-muted leading-relaxed">{before}</p>
+      </div>
+      <div className="rounded-[var(--radius-control)] border border-added/40 bg-added-bg p-3">
+        <p className="font-medium text-added text-xs uppercase tracking-wider">After</p>
+        <p className="mt-1.5 whitespace-pre-line leading-relaxed">{after}</p>
+      </div>
+    </div>
+  );
+}
+
 function ChangeRow({
   change,
   reverted,
@@ -156,15 +181,15 @@ function ChangeRow({
         </Toggle>
       </div>
 
-      <p className={cn("mt-3 whitespace-pre-line leading-relaxed", reverted && "text-muted")}>
-        {reverted ? (
-          change.before
-        ) : change.before ? (
-          <DiffText before={change.before} after={change.after} />
-        ) : (
-          change.after
-        )}
-      </p>
+      {reverted ? (
+        <p className="mt-3 whitespace-pre-line text-muted leading-relaxed">{change.before}</p>
+      ) : change.before && (change.section === "skills" || isRewrite(change)) ? (
+        <BeforeAfter before={change.before} after={change.after} />
+      ) : (
+        <p className="mt-3 whitespace-pre-line leading-relaxed">
+          {change.before ? <DiffText before={change.before} after={change.after} /> : change.after}
+        </p>
+      )}
     </li>
   );
 }

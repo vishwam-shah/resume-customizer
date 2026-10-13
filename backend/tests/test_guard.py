@@ -159,3 +159,10 @@ def test_rewrite_that_drops_a_metric_is_reverted():
     doc, _, flags = apply_output(original, out, make_job(), all_sections)
     assert doc.experience[0].bullets[0] == first  # "2000 requests per minute" kept
     assert any("dropped a number" in f.message for f in flags)
+
+
+def test_target_title_in_summary_is_not_flagged():
+    job = make_job()
+    out = _output(summary=f"{job.title} who builds Python services.")
+    _, _, flags = apply_output(make_resume(), out, job, ["summary"])
+    assert not flags

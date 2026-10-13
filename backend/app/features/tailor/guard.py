@@ -74,7 +74,10 @@ class _Guard:
         self.original_text = resume_to_text(original)
         self.original_low = self.original_text.lower()
         self.original_numbers = numbers_in(self.original_text)
-        self.job_terms = analysis.all_keywords()
+        # The target title itself isn't a claim: echoing it in the summary is
+        # standard ATS advice, so only skills and keywords are checked.
+        title = analysis.title.strip().lower()
+        self.job_terms = [t for t in analysis.all_keywords() if t.strip().lower() != title]
         # Umbrella terms the model justified with concrete resume wording.
         self.evidence: dict[str, list[str]] = {}
         for e in evidence:
