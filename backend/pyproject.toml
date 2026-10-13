@@ -2,7 +2,6 @@
 name = "backend"
 version = "0.1.0"
 description = "Resume Customizer API: parse, tailor and score resumes against a job description"
-readme = "README.md"
 authors = [
     { name = "Vishwam Shah", email = "vishwamshah007@gmail.com" }
 ]
