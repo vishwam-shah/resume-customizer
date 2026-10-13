@@ -1,0 +1,10 @@
+# Secrets: only *.example files are committed
+.env
+.env.*
+!.env.example
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
