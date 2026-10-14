@@ -101,7 +101,7 @@ function RunCard({ run, onDeleted }: { run: RunSummary; onDeleted: () => void })
       </h2>
       <p className="mt-1 text-muted text-sm">
         {run.fileName} · {pluralize(run.versionCount, "version")} ·{" "}
-        <time dateTime={run.updatedAt}>{dateFormat.format(new Date(run.updatedAt))}</time>
+        <time dateTime={run.updatedAt} suppressHydrationWarning>{dateFormat.format(new Date(run.updatedAt))}</time>
       </p>
 
       <dl className="mt-4 flex gap-6">
