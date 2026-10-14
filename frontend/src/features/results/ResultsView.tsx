@@ -28,6 +28,7 @@ import { ChangesView } from "./ChangesView";
 import { applyChoices, computeChanges } from "./changes";
 import { DownloadMenu } from "./DownloadMenu";
 import { KeywordsView } from "./KeywordsView";
+import { PagePreview } from "./PagePreview";
 import { resumeToPlainText } from "./plainText";
 import { ResumePreview } from "./ResumePreview";
 import { ScoreSummary } from "./ScoreSummary";
@@ -40,6 +41,7 @@ export function ResultsView() {
   const version = activeVersion(state);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [tab, setTab] = useState("resume");
+  const [previewMode, setPreviewMode] = useState<"page" | "text">("page");
 
   // Arriving at results (or switching version) moves focus to the heading.
   // biome-ignore lint/correctness/useExhaustiveDependencies: re-focus when the shown version changes
@@ -181,7 +183,23 @@ export function ResultsView() {
 
         <Tabs.Panel value="resume" className="mt-6 outline-none">
           <h2 className="sr-only">Tailored resume</h2>
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <ToggleGroup
+              aria-label="Preview"
+              value={[previewMode]}
+              onValueChange={(value) => value[0] && setPreviewMode(value[0] as "page" | "text")}
+              className="inline-flex rounded-[var(--radius-control)] border border-border bg-surface p-0.5"
+            >
+              {(["page", "text"] as const).map((mode) => (
+                <Toggle
+                  key={mode}
+                  value={mode}
+                  className="flex min-h-9 items-center rounded-[calc(var(--radius-control)-2px)] px-3 text-muted text-sm hover:text-fg data-[pressed]:bg-bg data-[pressed]:text-fg data-[pressed]:shadow-card"
+                >
+                  {mode === "page" ? "Page view" : "Text view"}
+                </Toggle>
+              ))}
+            </ToggleGroup>
             <Button
               variant="ghost"
               size="sm"
@@ -191,7 +209,11 @@ export function ResultsView() {
               Copy as text
             </Button>
           </div>
-          <ResumePreview resume={finalResume} />
+          {previewMode === "page" ? (
+            <PagePreview resume={finalResume} />
+          ) : (
+            <ResumePreview resume={finalResume} />
+          )}
         </Tabs.Panel>
 
         <Tabs.Panel value="changes" className="mt-6 outline-none">

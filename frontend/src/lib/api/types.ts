@@ -25,7 +25,9 @@ export type StageId = StageEvent["id"];
 export type DoneEvent = Schemas["DoneEvent"];
 export type ErrorBody = Schemas["ErrorBody"];
 export type Meta = Schemas["Meta"];
-export type ExportRequest = Schemas["ExportRequest"];
+// `paper` has a server default (A4), so callers may omit it.
+export type ExportRequest = Omit<Schemas["ExportRequest"], "paper"> &
+  Partial<Pick<Schemas["ExportRequest"], "paper">>;
 export type CoverLetterRequest = Schemas["CoverLetterRequest"];
 
 export type Section = NonNullable<TailorRequest["sections"]>[number];

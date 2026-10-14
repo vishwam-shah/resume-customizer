@@ -1,61 +1,101 @@
 "use client";
 
 import { Popover } from "@base-ui/react/popover";
-import { ArrowRight, Info } from "@phosphor-icons/react";
+import { ArrowUp, Info } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import type { Scores } from "@/lib/api/types";
 import { cn } from "@/lib/format";
 
 type Props = { before: Scores | null; after: Scores };
 
+/** A plain-language verdict for a 0-100 score. */
+function verdict(score: number): { label: string; tone: "good" | "ok" | "low" } {
+  if (score >= 75) return { label: "Strong", tone: "good" };
+  if (score >= 50) return { label: "Fair", tone: "ok" };
+  return { label: "Needs work", tone: "low" };
+}
+
 export function ScoreSummary({ before, after }: Props) {
+  const match = after.match;
+  const total =
+    match.matchedMustHave.length +
+    match.missingMustHave.length +
+    match.matchedKeywords.length +
+    match.missingKeywords.length +
+    match.matchedNiceToHave.length +
+    match.missingNiceToHave.length;
+  const matched =
+    match.matchedMustHave.length + match.matchedKeywords.length + match.matchedNiceToHave.length;
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2">
       <ScoreCard
-        label="Job match"
-        suffix="%"
+        title="Job match"
+        unit="%"
         before={before?.match.score ?? null}
-        after={after.match.score}
-        explainer="Share of the posting's skills and keywords your resume contains. Must-have skills count three times, other keywords twice, nice-to-haves once."
+        after={match.score}
+        sentence={(b, a) =>
+          b === null
+            ? `Your resume covers ${a}% of what this job asks for.`
+            : `Your resume now covers ${a}% of what this job asks for, up from ${b}%.`
+        }
+        detail={`${matched} of ${total} skills and keywords from the posting appear in your resume. Must-have skills count most.`}
+        explainer="How much of the posting your resume covers. Must-have skills count three times, other keywords twice, nice-to-haves once. Missing items are listed in Keywords & scores, with honest suggestions."
       />
       <ScoreCard
-        label="ATS readiness"
-        suffix="/100"
+        title="ATS readiness"
+        unit=" / 100"
         before={before?.ats.score ?? null}
         after={after.ats.score}
-        explainer="How well an applicant tracking system can read and rank the resume: keywords, title match, standard sections, contact details, quantified impact, action verbs and length. Transparent and repeatable; no tool can see inside a specific employer's ATS."
+        sentence={(b, a) =>
+          b === null
+            ? `Applicant tracking systems should read and rank this resume at ${a} out of 100.`
+            : `Applicant tracking systems should rank it higher: ${a} out of 100, up from ${b}.`
+        }
+        detail="Checks keywords, job title, standard sections, contact details, numbers in bullets, action verbs and length."
+        explainer="How well an applicant tracking system (ATS) can read and rank this resume for this job. Transparent and repeatable; no tool can see inside a specific employer's ATS. See the full breakdown in Keywords & scores."
       />
     </div>
   );
 }
 
 function ScoreCard({
-  label,
-  suffix,
+  title,
+  unit,
   before,
   after,
+  sentence,
+  detail,
   explainer,
 }: {
-  label: string;
-  suffix: string;
+  title: string;
+  unit: string;
   before: number | null;
   after: number;
+  sentence: (before: number | null, after: number) => string;
+  detail: string;
   explainer: string;
 }) {
-  const delta = before === null ? null : after - before;
-  const deltaText =
-    delta === null ? "" : delta > 0 ? `up ${delta}` : delta < 0 ? `down ${-delta}` : "unchanged";
+  const change = before === null ? null : after - before;
+  const { label, tone } = verdict(after);
 
   return (
-    <div className="rounded-[var(--radius-card)] border border-border bg-bg p-5" data-surface>
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="font-medium text-muted text-sm">{label}</h2>
+    <section
+      aria-label={title}
+      className="rounded-[var(--radius-card)] border border-border bg-bg p-5 sm:p-6"
+      data-surface
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">{title}</h2>
+          <p className="mt-1 text-muted text-sm">{sentence(before, after)}</p>
+        </div>
         <Popover.Root>
           <Popover.Trigger
-            aria-label={`How ${label.toLowerCase()} is calculated`}
-            className="-m-2 grid size-9 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"
+            aria-label={`What ${title.toLowerCase()} means`}
+            className="-m-1.5 grid size-9 shrink-0 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"
           >
-            <Info aria-hidden className="size-4" />
+            <Info aria-hidden className="size-5" />
           </Popover.Trigger>
           <Popover.Portal>
             <Popover.Positioner side="bottom" align="end" sideOffset={6}>
@@ -63,7 +103,7 @@ function ScoreCard({
                 data-surface
                 className="max-w-xs rounded-[var(--radius-control)] border border-border bg-bg p-4 text-sm shadow-card outline-none transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0"
               >
-                <Popover.Title className="font-medium">{label}</Popover.Title>
+                <Popover.Title className="font-medium">{title}</Popover.Title>
                 <Popover.Description className="mt-1 text-muted">{explainer}</Popover.Description>
               </Popover.Popup>
             </Popover.Positioner>
@@ -71,48 +111,104 @@ function ScoreCard({
         </Popover.Root>
       </div>
 
-      <p className="mt-2 flex items-baseline gap-3">
-        {before !== null ? (
-          <>
-            <span className="tabular text-2xl text-subtle">
-              {before}
-              <span className="sr-only">{suffix} before</span>
+      <div className="mt-5 flex flex-wrap items-end gap-x-8 gap-y-3">
+        {before !== null ? <Figure caption="Before" value={before} unit={unit} muted /> : null}
+        <Figure caption={before === null ? "Score" : "After tailoring"} value={after} unit={unit} />
+        <div className="flex flex-wrap items-center gap-2 pb-1">
+          {change !== null && change !== 0 ? (
+            <span
+              className={cn(
+                "tabular inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium text-sm",
+                change > 0 ? "bg-added-bg text-added" : "bg-removed-bg text-removed",
+              )}
+            >
+              <ArrowUp
+                aria-hidden
+                weight="bold"
+                className={cn("size-3.5", change < 0 && "rotate-180")}
+              />
+              {change > 0 ? "+" : "−"}
+              {Math.abs(change)} points
             </span>
-            <ArrowRight aria-hidden className="size-4 self-center text-subtle" />
-          </>
-        ) : null}
-        <span className="tabular font-semibold text-4xl tracking-tight">
-          {after}
-          <span className="font-normal text-lg text-muted">{suffix}</span>
-          <span className="sr-only"> after tailoring</span>
-        </span>
-        {delta !== null && delta !== 0 ? (
+          ) : change === 0 ? (
+            <span className="rounded-full bg-surface-2 px-2.5 py-1 text-muted text-sm">
+              No change
+            </span>
+          ) : null}
           <span
             className={cn(
-              "tabular rounded-full px-2 py-0.5 font-medium text-sm",
-              delta > 0 ? "bg-added-bg text-added" : "bg-removed-bg text-removed",
+              "rounded-full border px-2.5 py-1 font-medium text-sm",
+              tone === "good" && "border-added/50 text-added",
+              tone === "ok" && "border-border-strong text-fg",
+              tone === "low" && "border-warn/50 text-warn",
             )}
           >
-            <span aria-hidden>{delta > 0 ? `+${delta}` : delta}</span>
-            <span className="sr-only">, {deltaText}</span>
+            {label}
           </span>
-        ) : null}
-      </p>
-
-      <div aria-hidden className="relative mt-4 h-1.5 overflow-hidden rounded-full bg-surface-2">
-        {before !== null ? (
-          <div
-            className="absolute inset-y-0 left-0 rounded-full bg-border-strong"
-            style={{ width: `${before}%` }}
-          />
-        ) : null}
-        <motion.div
-          className="absolute inset-y-0 left-0 rounded-full bg-fg"
-          initial={{ width: `${before ?? 0}%` }}
-          animate={{ width: `${after}%` }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
-        />
+        </div>
       </div>
+
+      {/* Two labelled bars instead of overlapping ones: no decoding needed. */}
+      <dl className="mt-5 space-y-2">
+        {before !== null ? <Bar label="Before" value={before} muted /> : null}
+        <Bar label={before === null ? "Score" : "After"} value={after} animateFrom={before ?? 0} />
+      </dl>
+
+      <p className="mt-4 text-muted text-xs">{detail}</p>
+    </section>
+  );
+}
+
+function Figure({
+  caption,
+  value,
+  unit,
+  muted = false,
+}: {
+  caption: string;
+  value: number;
+  unit: string;
+  muted?: boolean;
+}) {
+  return (
+    <div>
+      <p className="font-medium text-muted text-xs uppercase tracking-wider">{caption}</p>
+      <p
+        className={cn(
+          "tabular mt-1 font-semibold tracking-tight",
+          muted ? "text-2xl text-muted" : "text-4xl",
+        )}
+      >
+        {value}
+        <span className="font-normal text-base text-muted">{unit}</span>
+      </p>
+    </div>
+  );
+}
+
+function Bar({
+  label,
+  value,
+  muted = false,
+  animateFrom,
+}: {
+  label: string;
+  value: number;
+  muted?: boolean;
+  animateFrom?: number;
+}) {
+  return (
+    <div className="grid grid-cols-[3.5rem_1fr_2.5rem] items-center gap-3 text-xs">
+      <dt className="text-muted">{label}</dt>
+      <dd className="h-2 overflow-hidden rounded-full bg-surface-2" aria-hidden>
+        <motion.div
+          className={cn("h-full rounded-full", muted ? "bg-border-strong" : "bg-fg")}
+          initial={{ width: `${animateFrom ?? value}%` }}
+          animate={{ width: `${value}%` }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+        />
+      </dd>
+      <dd className="tabular text-right text-muted">{value}</dd>
     </div>
   );
 }

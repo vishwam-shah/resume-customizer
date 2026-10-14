@@ -57,6 +57,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pyjwt" },
     { name = "pymupdf" },
+    { name = "pymupdf-fonts" },
     { name = "python-docx" },
     { name = "slowapi" },
     { name = "tenacity" },
@@ -78,6 +79,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "pyjwt", specifier = ">=2.15.1" },
     { name = "pymupdf", specifier = ">=1.28.2" },
+    { name = "pymupdf-fonts", specifier = ">=1.0.5" },
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "slowapi", specifier = ">=0.1.10" },
     { name = "tenacity", specifier = ">=9.1.4" },
@@ -1379,6 +1381,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e2/93/08f404a1f0155fe24137cf2d3aabd3e2b4b08c62053ed89c60f2611be3e9/pymupdf-1.28.2-cp310-abi3-win_arm64.whl", hash = "sha256:ffe91a24edc75c80da2a4b62f50fc0f54632d34fc8fe4cbc48e5c7ff07cf8fb4", size = 19759252, upload-time = "2026-08-06T21:39:12.937Z" },
     { url = "https://files.pythonhosted.org/packages/58/8c/d897dcd32a25b58186c968b15ce4324ca029e9d96460de12325314e390be/pymupdf-1.28.2-cp313-abi3-pyemscripten_2025_0_wasm32.whl", hash = "sha256:2e1b574c0fd2cb238021033fd3c0f9c4388816638df064e4bfb56d9d81736dc8", size = 18399403, upload-time = "2026-08-06T21:39:25.008Z" },
     { url = "https://files.pythonhosted.org/packages/f6/f1/de34a1c53fe2bf8c6e71db84b0ced782d408970c9810d2b456a2ae96814c/pymupdf-1.28.2-cp314-cp314t-manylinux_2_28_x86_64.whl", hash = "sha256:fd481ed48bef56305c41fb7e05a055c03345c899c7b101dad086258b438f8168", size = 25802333, upload-time = "2026-08-06T21:39:41.426Z" },
+]
+
+[[package]]
+name = "pymupdf-fonts"
+version = "1.0.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e7/15/e4f3b2acecf4209ff593e85b3646f224093a08f6e9824230a3d11885407d/pymupdf_fonts-1.0.5.tar.gz", hash = "sha256:ac12e3ec4affa35e9a0aca29135ef41c23bdbe5758c3355dac236986309e6bc6", size = 4230874, upload-time = "2021-12-27T11:49:44.714Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/80/a3/1701c6109a1cf31f4c24156f3242db0afe669fecedf4d27c72e3b7e67591/pymupdf_fonts-1.0.5-py3-none-any.whl", hash = "sha256:8e4bb70a4a8f6bb895ef8f3b77b98f6c43e2f39c31cfdec5fd21c3d512c38b25", size = 4230320, upload-time = "2021-12-27T11:50:12.651Z" },
 ]
 
 [[package]]

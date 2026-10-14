@@ -1,28 +1,31 @@
 "use client";
 
 import { Menu } from "@base-ui/react/menu";
-import { CaretDown, DownloadSimple, FileDoc, FilePdf, FileText } from "@phosphor-icons/react";
+import {
+  CaretDown,
+  DownloadSimple,
+  FileCode,
+  FileDoc,
+  FilePdf,
+  FileText,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { buttonClasses, Spinner } from "@/components/ui/Button";
-import { ApiError, exportDocument } from "@/lib/api/client";
+import { ApiError, describeFit, exportDocument } from "@/lib/api/client";
 import type { ExportFormat, ExportRequest } from "@/lib/api/types";
 
-const formats: Array<{
-  format: ExportFormat;
-  label: string;
-  hint: string;
-  icon: typeof FilePdf;
-}> = [
-  { format: "pdf", label: "PDF", hint: "Best for applying", icon: FilePdf },
+type FormatOption = { format: ExportFormat; label: string; hint: string; icon: typeof FilePdf };
+
+const resumeFormats: FormatOption[] = [
+  { format: "pdf", label: "PDF", hint: "One page, best for applying", icon: FilePdf },
   { format: "docx", label: "Word", hint: "Edit before sending", icon: FileDoc },
-  {
-    format: "txt",
-    label: "Plain text",
-    hint: "Paste into forms",
-    icon: FileText,
-  },
+  { format: "tex", label: "LaTeX", hint: "Jake's template, for Overleaf", icon: FileCode },
+  { format: "txt", label: "Plain text", hint: "Paste into forms", icon: FileText },
 ];
+
+// A cover letter isn't a resume template: no LaTeX for it.
+const letterFormats = resumeFormats.filter((option) => option.format !== "tex");
 
 export function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
@@ -42,13 +45,17 @@ type Props = {
 
 export function DownloadMenu({ label = "Download", build, variant = "primary", disabled }: Props) {
   const [busy, setBusy] = useState<ExportFormat | null>(null);
+  const options = build("pdf").kind === "coverLetter" ? letterFormats : resumeFormats;
 
   async function download(format: ExportFormat) {
     setBusy(format);
     try {
-      const { blob, fileName } = await exportDocument(build(format));
+      const { blob, fileName, fit } = await exportDocument(build(format));
       saveBlob(blob, fileName);
-      toast.success("Downloaded", { description: fileName });
+      const fitNote = describeFit(fit);
+      toast.success("Downloaded", {
+        description: fitNote ? `${fileName} · ${fitNote}` : fileName,
+      });
     } catch (error) {
       const apiError = ApiError.fromUnknown(error);
       toast.error(apiError.message, {
@@ -75,9 +82,9 @@ export function DownloadMenu({ label = "Download", build, variant = "primary", d
         <Menu.Positioner side="bottom" align="end" sideOffset={6}>
           <Menu.Popup
             data-surface
-            className="min-w-56 origin-[var(--transform-origin)] rounded-[var(--radius-control)] border border-border bg-bg p-1 shadow-card outline-none transition-[opacity,transform] duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0"
+            className="min-w-64 origin-[var(--transform-origin)] rounded-[var(--radius-control)] border border-border bg-bg p-1 shadow-card outline-none transition-[opacity,transform] duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0"
           >
-            {formats.map(({ format, label: name, hint, icon: Icon }) => (
+            {options.map(({ format, label: name, hint, icon: Icon }) => (
               <Menu.Item
                 key={format}
                 onClick={() => void download(format)}

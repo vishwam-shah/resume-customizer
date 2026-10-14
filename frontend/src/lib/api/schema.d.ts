@@ -150,7 +150,7 @@ export interface paths {
         put?: never;
         /**
          * Export
-         * @description Render the resume or cover letter as PDF, DOCX or plain text.
+         * @description Render the resume (one page) or cover letter as PDF, DOCX, LaTeX or text.
          */
         post: operations["export_api_v1_export_post"];
         delete?: never;
@@ -249,10 +249,16 @@ export interface components {
              * Format
              * @enum {string}
              */
-            format: "pdf" | "docx" | "txt";
+            format: "pdf" | "docx" | "txt" | "tex" | "png";
             resume: components["schemas"]["ResumeDoc"];
             /** Coverletter */
             coverLetter?: string | null;
+            /**
+             * Paper
+             * @default a4
+             * @enum {string}
+             */
+            paper: "a4" | "letter";
         };
         /**
          * ExtraSection

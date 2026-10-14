@@ -97,17 +97,37 @@ export async function parseResume(file: File, signal?: AbortSignal): Promise<Par
   return response.json();
 }
 
+/** How the resume was fitted on one page (X-Resume-Fit header on resume exports). */
+export type FitInfo = { pages: number; fontSize: number; trimmed: string[] };
+
 export async function exportDocument(
   payload: ExportRequest,
-): Promise<{ blob: Blob; fileName: string }> {
+  signal?: AbortSignal,
+): Promise<{ blob: Blob; fileName: string; fit: FitInfo | null }> {
   const response = await request("/api/v1/export", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+    signal,
   });
   const disposition = response.headers.get("Content-Disposition") ?? "";
   const fileName = /filename="([^"]+)"/.exec(disposition)?.[1] ?? `resume.${payload.format}`;
-  return { blob: await response.blob(), fileName };
+  let fit: FitInfo | null = null;
+  try {
+    fit = JSON.parse(response.headers.get("X-Resume-Fit") ?? "null");
+  } catch {
+    fit = null;
+  }
+  return { blob: await response.blob(), fileName, fit };
+}
+
+/** "One page" or "One page · trimmed 5 lower-priority bullets". */
+export function describeFit(fit: FitInfo | null): string | null {
+  if (!fit) return null;
+  if (fit.pages > 1) return `${fit.pages} pages: too long to fit on one page even when trimmed`;
+  return fit.trimmed.length
+    ? `One page · trimmed ${fit.trimmed.join(" and ")}`
+    : "Fits on one page";
 }
 
 export async function parseLatex(source: string, signal?: AbortSignal): Promise<ParsedFile> {

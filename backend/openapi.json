@@ -297,7 +297,7 @@
           "export"
         ],
         "summary": "Export",
-        "description": "Render the resume or cover letter as PDF, DOCX or plain text.",
+        "description": "Render the resume (one page) or cover letter as PDF, DOCX, LaTeX or text.",
         "operationId": "export_api_v1_export_post",
         "requestBody": {
           "content": {
@@ -612,7 +612,9 @@
             "enum": [
               "pdf",
               "docx",
-              "txt"
+              "txt",
+              "tex",
+              "png"
             ],
             "title": "Format"
           },
@@ -630,6 +632,15 @@
               }
             ],
             "title": "Coverletter"
+          },
+          "paper": {
+            "type": "string",
+            "enum": [
+              "a4",
+              "letter"
+            ],
+            "title": "Paper",
+            "default": "a4"
           }
         },
         "type": "object",

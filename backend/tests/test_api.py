@@ -153,3 +153,42 @@ async def test_keep_awake_pings_public_health_url(monkeypatch):
     async with keep_awake.keep_awake(None):
         await asyncio.sleep(0.2)
     assert calls and calls[0] == "https://api.example.com/api/v1/health"
+
+
+def test_pdf_export_is_one_page_and_reports_fit():
+    import json
+
+    resume = make_resume()
+    # Far too much for one page at any readable size: fitting must trim.
+    resume.experience[0].bullets = [
+        f"Delivered improvement number {i} across the platform with measurable impact "
+        "for customers and the team, documented and reviewed end to end"
+        for i in range(60)
+    ]
+    r = client.post(
+        "/api/v1/export", json={"format": "pdf", "resume": resume.model_dump(by_alias=True)}
+    )
+    assert r.status_code == 200
+    fit = json.loads(r.headers["x-resume-fit"])
+    assert fit["pages"] == 1 and fit["trimmed"]
+    pdf = pymupdf.open(stream=r.content, filetype="pdf")
+    assert pdf.page_count == 1
+    assert "�" not in pdf[0].get_text()  # every glyph extracts cleanly
+
+
+def test_latex_export_uses_jakes_template():
+    resume = make_resume().model_dump(by_alias=True)
+    r = client.post("/api/v1/export", json={"format": "tex", "resume": resume})
+    assert r.status_code == 200
+    tex = r.text
+    assert "Jake's Resume" in tex and r"\resumeSubheading" in tex
+    assert r"\resumeItem{Added semantic search with Pinecone for 40\% faster lookups}" in tex
+    assert tex.count("{") == tex.count("}")
+
+
+def test_png_preview_matches_one_page():
+    resume = make_resume().model_dump(by_alias=True)
+    r = client.post("/api/v1/export", json={"format": "png", "resume": resume})
+    assert r.status_code == 200 and r.headers["content-type"] == "image/png"
+    assert r.content[:8] == b"\x89PNG\r\n\x1a\n"
+    assert "inline" in r.headers["content-disposition"]
