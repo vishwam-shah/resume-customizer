@@ -64,8 +64,13 @@ def prepare(source: str) -> str:
     return _pdftex_only.sub(lambda m: f"% {m.group(1)}  (pdfTeX only; skipped by XeTeX)", source)
 
 
+# System chatter that isn't about the document (e.g. a missing fontconfig file).
+_noise = re.compile(r"^(Fontconfig (?:error|warning)|warning:|note:)", re.I)
+
+
 def _first_error(output: str) -> str:
     """The first LaTeX error with its line, e.g. 'line 42: Undefined control sequence'."""
+    output = "\n".join(line for line in output.splitlines() if not _noise.match(line.strip()))
     for line in output.splitlines():
         match = re.match(r"error: (?:[^:]+\.tex:)?(\d+): (.+)", line.strip())
         if match:

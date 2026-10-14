@@ -154,3 +154,13 @@ def test_trimmed_bullets_are_removed_from_the_template():
     assert "Built a FastAPI service" not in out  # the whole \resumeItem line is gone
     assert r"\resumeItem{Added semantic search with Pinecone for 40\% faster lookups}" in out
     assert out.count("{") == out.count("}")
+
+
+def test_compile_error_message_ignores_system_noise():
+    from app.features.latex.compile import _first_error
+
+    log = (
+        "Fontconfig error: Cannot load default config file: No such file: (null)\n"
+        "error: resume.tex:42: Undefined control sequence\n"
+    )
+    assert _first_error(log) == "line 42: Undefined control sequence"

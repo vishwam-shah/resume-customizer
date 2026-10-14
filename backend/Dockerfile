@@ -21,7 +21,12 @@ FROM python:3.13-slim
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PORT=8000 ENVIRONMENT=production \
     TECTONIC_CACHE=/opt/tex-cache TECTONIC_HOME=/opt/tex-cache XDG_CACHE_HOME=/opt/tex-cache
 COPY --from=tectonic /usr/local/bin/tectonic /usr/local/bin/tectonic
-RUN useradd --create-home --uid 1001 app
+# fontconfig gives Tectonic its default font configuration; without it every
+# compile prints "Fontconfig error: Cannot load default config file".
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fontconfig ca-certificates \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 1001 app
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY app ./app
