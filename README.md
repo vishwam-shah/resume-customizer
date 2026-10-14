@@ -27,7 +27,10 @@ Paste a job description, upload your resume (PDF or DOCX), and get a version tai
 - Accounts with saved history.
 - Streaming progress for every pipeline step.
 
-The app is also an **installable PWA** with offline handling.
+**Beyond the brief:**
+- **LaTeX in and out:** paste a `.tex` resume; the tailored text is written back into *your own template* (bullets, summary, skill rows) with the preamble and layout untouched, then edit it, download it, or open it in Overleaf.
+- **Email verification and password reset** with 6-digit codes.
+- **Installable PWA** with offline handling.
 
 ## How the tailoring stays honest
 
@@ -117,7 +120,7 @@ frontend/src/
 | Auth and data | Better Auth 1.7 (email and password), Drizzle ORM, Neon Postgres |
 | Backend | Python 3.13, FastAPI 0.143 (native SSE), Pydantic 2, PyMuPDF, python-docx, slowapi, uv |
 | LLM | Groq (OpenAI-compatible, strict JSON schema), Google Gemini (google-genai, Interactions API) |
-| Quality | Ruff, pytest (40 tests), Biome, Vitest, Playwright, GitHub Actions CI |
+| Quality | Ruff, pytest (49 tests), Biome, Vitest, Playwright, GitHub Actions CI |
 | Hosting | Vercel (web), Render (API, Docker), Neon (database) |
 
 ## Accessibility and UX
