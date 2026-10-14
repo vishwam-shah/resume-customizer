@@ -58,6 +58,9 @@ class TailorRequest(CamelModel):
         default_factory=lambda: ["summary", "skills", "experience", "projects"], min_length=1
     )
     tone: Tone = "balanced"
+    # Skills the candidate confirmed they genuinely have ("I have this" in the
+    # UI). Usable in Skills and the summary; bullets still need evidence.
+    confirmed_skills: list[str] = Field(default_factory=list, max_length=40)
 
 
 class Flag(CamelModel):

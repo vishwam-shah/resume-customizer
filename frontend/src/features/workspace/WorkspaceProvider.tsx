@@ -143,6 +143,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       analysis: current.analysis,
       sections: current.options.sections,
       tone: current.options.tone,
+      confirmedSkills: current.confirmedSkills ?? [],
     };
 
     let result: TailorResult | null = null;

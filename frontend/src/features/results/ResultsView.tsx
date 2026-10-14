@@ -30,6 +30,7 @@ import { DownloadMenu } from "./DownloadMenu";
 import { KeywordsView } from "./KeywordsView";
 import { PagePreview } from "./PagePreview";
 import { resumeToPlainText } from "./plainText";
+import { RaiseMatchPanel } from "./RaiseMatchPanel";
 import { ResumePreview } from "./ResumePreview";
 import { ScoreSummary } from "./ScoreSummary";
 
@@ -37,7 +38,7 @@ const tabClass =
   "relative z-10 flex min-h-11 items-center justify-center gap-2 whitespace-nowrap rounded-[calc(var(--radius-control)-2px)] px-4 font-medium text-muted text-sm hover:text-fg data-[active]:text-fg";
 
 export function ResultsView() {
-  const { state, saveStatus, dispatch } = useWorkspace();
+  const { state, saveStatus, dispatch, startRun } = useWorkspace();
   const version = activeVersion(state);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [tab, setTab] = useState("resume");
@@ -150,7 +151,11 @@ export function ResultsView() {
       ) : null}
 
       <div className="mt-8">
-        <ScoreSummary before={state.scoresBefore} after={result.scores} />
+        <ScoreSummary
+          before={state.scoresBefore}
+          after={result.scores}
+          onRaiseMatch={() => setTab("keywords")}
+        />
       </div>
 
       <GuardNotice flags={result.flags} />
@@ -229,6 +234,15 @@ export function ResultsView() {
 
         <Tabs.Panel value="keywords" className="mt-6 outline-none">
           <h2 className="sr-only">Keywords and scores</h2>
+          <div className="mb-10">
+            <RaiseMatchPanel
+              match={result.scores.match}
+              confirmed={state.confirmedSkills ?? []}
+              onToggle={(skill) => dispatch({ type: "toggleConfirmed", skill })}
+              onCreateVersion={() => void startRun()}
+              busy={state.run.status === "running"}
+            />
+          </div>
           <KeywordsView
             match={result.scores.match}
             ats={result.scores.ats}

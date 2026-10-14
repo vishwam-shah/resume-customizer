@@ -38,6 +38,53 @@ def _stage(stage_id: StageId, status: Literal["active", "done"]) -> ServerSentEv
     return ServerSentEvent(data=StageEvent(id=stage_id, status=status), event="stage")
 
 
+match_target = 90
+
+
+async def _second_pass(req, resume, analysis, tailored, suggestions, flags, output):
+    """Below the target match: one more pass aimed at the terms still missing.
+
+    The rewrite is checked against the ORIGINAL resume again, and kept only if
+    it scores higher, so this can raise the match but never invent or regress.
+    """
+    current = score(tailored, analysis).match
+    missing = current.missing_must_have + current.missing_keywords
+    if current.score >= match_target or not missing:
+        return tailored, suggestions, flags, output
+    focus = (
+        "SECOND PASS. The draft below still misses these job terms: "
+        + ", ".join(missing)
+        + ". Cover each one ONLY if the original resume or the confirmed skills genuinely "
+        "support it (rule 5, with termEvidence); leave the rest in keywordSuggestions. "
+        "Keep everything that already works.\n\n"
+    )
+    try:
+        second, _ = await router.generate(
+            TailorOutput,
+            system=prompts.system_prompt,
+            user=prompts.build_user_prompt(
+                job_description=req.job_description,
+                analysis=analysis,
+                resume=tailored,
+                sections=req.sections,
+                tone=req.tone,
+                match=current,
+                confirmed=req.confirmed_skills,
+                focus=focus,
+            ),
+            temperature=0.25,
+            max_tokens=12000,
+        )
+    except AppError:
+        return tailored, suggestions, flags, output  # the first draft still stands
+    improved, s2, f2 = guard.apply_output(
+        resume, second, analysis, req.sections, req.confirmed_skills
+    )
+    if score(improved, analysis).match.score > current.score:
+        return improved, s2, f2, second
+    return tailored, suggestions, flags, output
+
+
 def score(doc: ResumeDoc, analysis: JobAnalysis) -> Scores:
     return Scores(match=match_score(resume_to_text(doc), analysis), ats=ats_score(doc, analysis))
 
@@ -100,6 +147,7 @@ async def run_pipeline(req: TailorRequest) -> AsyncIterator[ServerSentEvent]:
                 sections=req.sections,
                 tone=req.tone,
                 match=before.match,
+                confirmed=req.confirmed_skills,
             ),
             temperature=0.35,
             max_tokens=12000,
@@ -107,7 +155,12 @@ async def run_pipeline(req: TailorRequest) -> AsyncIterator[ServerSentEvent]:
         yield _stage("tailoring", "done")
 
         yield _stage("checking", "active")
-        tailored, suggestions, flags = guard.apply_output(resume, output, analysis, req.sections)
+        tailored, suggestions, flags = guard.apply_output(
+            resume, output, analysis, req.sections, req.confirmed_skills
+        )
+        tailored, suggestions, flags, output = await _second_pass(
+            req, resume, analysis, tailored, suggestions, flags, output
+        )
         result = TailorResult(
             resume=tailored,
             suggestions=suggestions,

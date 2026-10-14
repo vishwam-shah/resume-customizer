@@ -456,6 +456,8 @@ export interface components {
              * @enum {string}
              */
             tone: "balanced" | "confident" | "concise";
+            /** Confirmedskills */
+            confirmedSkills?: string[];
         };
         /** ValidationError */
         ValidationError: {

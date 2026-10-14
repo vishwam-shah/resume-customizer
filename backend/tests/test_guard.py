@@ -103,7 +103,7 @@ def test_unshown_skill_moves_to_suggestions():
 
     out = _output(skills=[SkillGroup(name="Languages", items=["Python", "Kubernetes"])])
     doc, suggestions, flags = apply_output(make_resume(), out, make_job(), all_sections)
-    assert doc.skills[0].items == ["Python"]
+    assert "Kubernetes" not in doc.skills[0].items and "Python" in doc.skills[0].items
     assert any(s.keyword == "Kubernetes" for s in suggestions)
     assert any(f.section == "skills" for f in flags)
 
@@ -176,3 +176,70 @@ def test_trailing_keyword_tags_are_stripped():
     assert strip_keyword_tag(tagged, original) == original
     kept = "Led the API (v2) migration"
     assert strip_keyword_tag(kept, "Led the API (v2) migration") == kept
+
+
+def test_rewrite_that_drops_a_job_keyword_is_reverted():
+    original = make_resume()
+    first, second = original.experience[0].bullets
+    # "FastAPI" is a must-have in make_job(); the rewrite drops it.
+    out = _output(
+        experience=[
+            TailoredEntry(
+                id="exp-1",
+                bullets=["Built a backend service handling 2000 requests per minute", second],
+            )
+        ]
+    )
+    doc, _, flags = apply_output(original, out, make_job(), all_sections)
+    assert doc.experience[0].bullets[0] == first
+    assert any("dropped a keyword" in f.message for f in flags)
+
+
+def test_dropped_job_skills_are_restored():
+    from app.features.resume.models import SkillGroup
+
+    # The model drops PostgreSQL (a job keyword) from the skills list.
+    out = _output(skills=[SkillGroup(name="Languages", items=["Python"])])
+    doc, _, _ = apply_output(make_resume(), out, make_job(), all_sections)
+    listed = [i for g in doc.skills for i in g.items]
+    assert "PostgreSQL" in listed and "Python" in listed
+
+
+def test_tailoring_never_lowers_the_match():
+    from app.features.resume.models import SkillGroup
+    from app.features.resume.render_text import resume_to_text
+    from app.features.scoring.match import match_score
+
+    original = make_resume()
+    out = _output(
+        summary="Engineer.",
+        skills=[SkillGroup(name="Languages", items=["TypeScript"])],
+        experience=[TailoredEntry(id="exp-1", bullets=["Built a service", "Added search"])],
+    )
+    doc, _, _ = apply_output(original, out, make_job(), all_sections)
+    before = match_score(resume_to_text(original), make_job()).score
+    after = match_score(resume_to_text(doc), make_job()).score
+    assert after >= before
+
+
+def test_confirmed_skills_allowed_in_skills_not_in_unrelated_bullets():
+    from app.features.resume.models import SkillGroup
+
+    out = _output(
+        skills=[SkillGroup(name="Languages", items=["Python", "Kubernetes"])],
+        experience=[
+            TailoredEntry(
+                id="exp-1",
+                bullets=[
+                    "Built a FastAPI service on Kubernetes handling 2000 requests per minute",
+                    "Added semantic search with Pinecone for 40% faster lookups",
+                ],
+            )
+        ],
+    )
+    doc, suggestions, _ = apply_output(
+        make_resume(), out, make_job(), all_sections, confirmed=["Kubernetes"]
+    )
+    assert "Kubernetes" in doc.skills[0].items  # the candidate vouched for it
+    assert "Kubernetes" not in doc.experience[0].bullets[0]  # but not in this role's work
+    assert not any(s.keyword == "Kubernetes" for s in suggestions)

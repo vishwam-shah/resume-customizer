@@ -31,3 +31,13 @@ def test_ats_flags_missing_contact():
     resume = make_resume()
     resume.contact.email = None
     assert any("email" in issue for issue in ats_score(resume, make_job()).issues)
+
+
+def test_spelling_variants_match_but_meaning_stays_strict():
+    assert contains_term("full-stack developer", "Full Stack")
+    assert contains_term("a fullstack developer", "full stack")
+    assert contains_term("full stack developer", "full-stack")
+    assert contains_term("built rag pipelines", "retrieval augmented generation")
+    assert contains_term("integrated llms", "LLM")
+    assert not contains_term("javascript", "java")
+    assert not contains_term("reaction time", "react")

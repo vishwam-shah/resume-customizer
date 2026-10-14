@@ -52,6 +52,8 @@ export type WorkspaceState = {
   activeVersionId: string | null;
   /** Identifies this job + resume session in saved history. */
   sessionId: string | null;
+  /** Missing skills the user confirmed they genuinely have ("I have this"). */
+  confirmedSkills: string[];
   view: "inputs" | "results";
 };
 
@@ -70,6 +72,7 @@ export const initialState: WorkspaceState = {
   versions: [],
   activeVersionId: null,
   sessionId: null,
+  confirmedSkills: [],
   view: "inputs",
 };
 
@@ -90,6 +93,7 @@ export type WorkspaceAction =
   | { type: "deleteVersion"; id: string }
   | { type: "toggleChange"; key: string }
   | { type: "setChanges"; keys: string[]; reject: boolean }
+  | { type: "toggleConfirmed"; skill: string }
   | { type: "setCoverLetter"; versionId: string; text: string }
   | { type: "setLatexEdit"; versionId: string; text: string | null }
   | { type: "showView"; view: WorkspaceState["view"] }
@@ -104,6 +108,7 @@ const clearDerived = (state: WorkspaceState): WorkspaceState => ({
   versions: [],
   activeVersionId: null,
   sessionId: null,
+  confirmedSkills: [],
   view: "inputs",
 });
 
@@ -207,6 +212,16 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
           ? [...new Set([...v.rejected, ...action.keys])]
           : v.rejected.filter((k) => !action.keys.includes(k)),
       }));
+    }
+    case "toggleConfirmed": {
+      const current = state.confirmedSkills ?? []; // older saved sessions lack it
+      const has = current.includes(action.skill);
+      return {
+        ...state,
+        confirmedSkills: has
+          ? current.filter((s) => s !== action.skill)
+          : [...current, action.skill],
+      };
     }
     case "setLatexEdit":
       return updateVersion(state, action.versionId, (v) => ({ ...v, latexEdited: action.text }));

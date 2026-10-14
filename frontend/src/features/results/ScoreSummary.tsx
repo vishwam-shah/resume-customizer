@@ -1,12 +1,12 @@
 "use client";
 
 import { Popover } from "@base-ui/react/popover";
-import { ArrowUp, Info } from "@phosphor-icons/react";
+import { ArrowRight, ArrowUp, Info } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import type { Scores } from "@/lib/api/types";
 import { cn } from "@/lib/format";
 
-type Props = { before: Scores | null; after: Scores };
+type Props = { before: Scores | null; after: Scores; onRaiseMatch?: () => void };
 
 /** A plain-language verdict for a 0-100 score. */
 function verdict(score: number): { label: string; tone: "good" | "ok" | "low" } {
@@ -15,7 +15,7 @@ function verdict(score: number): { label: string; tone: "good" | "ok" | "low" } 
   return { label: "Needs work", tone: "low" };
 }
 
-export function ScoreSummary({ before, after }: Props) {
+export function ScoreSummary({ before, after, onRaiseMatch }: Props) {
   const match = after.match;
   const total =
     match.matchedMustHave.length +
@@ -40,6 +40,18 @@ export function ScoreSummary({ before, after }: Props) {
             : `Your resume now covers ${a}% of what this job asks for, up from ${b}%.`
         }
         detail={`${matched} of ${total} skills and keywords from the posting appear in your resume. Must-have skills count most.`}
+        action={
+          match.score < 90 && onRaiseMatch ? (
+            <button
+              type="button"
+              onClick={onRaiseMatch}
+              className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-[var(--radius-control)] border border-border-strong px-3 font-medium text-sm hover:bg-surface-2"
+            >
+              Raise your match toward 90%: confirm skills you have
+              <ArrowRight aria-hidden className="size-4" />
+            </button>
+          ) : null
+        }
         explainer="How much of the posting your resume covers. Must-have skills count three times, other keywords twice, nice-to-haves once. Missing items are listed in Keywords & scores, with honest suggestions."
       />
       <ScoreCard
@@ -67,6 +79,7 @@ function ScoreCard({
   sentence,
   detail,
   explainer,
+  action,
 }: {
   title: string;
   unit: string;
@@ -75,6 +88,7 @@ function ScoreCard({
   sentence: (before: number | null, after: number) => string;
   detail: string;
   explainer: string;
+  action?: React.ReactNode;
 }) {
   const change = before === null ? null : after - before;
   const { label, tone } = verdict(after);
@@ -155,6 +169,7 @@ function ScoreCard({
       </dl>
 
       <p className="mt-4 text-muted text-xs">{detail}</p>
+      {action}
     </section>
   );
 }

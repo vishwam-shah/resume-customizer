@@ -1195,6 +1195,14 @@
             ],
             "title": "Tone",
             "default": "balanced"
+          },
+          "confirmedSkills": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 40,
+            "title": "Confirmedskills"
           }
         },
         "type": "object",

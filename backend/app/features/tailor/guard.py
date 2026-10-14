@@ -78,11 +78,19 @@ def pair_bullets(original: list[str], rewritten: list[str]) -> list[int]:
 
 class _Guard:
     def __init__(
-        self, original: ResumeDoc, analysis: JobAnalysis, evidence: list[TermEvidence]
+        self,
+        original: ResumeDoc,
+        analysis: JobAnalysis,
+        evidence: list[TermEvidence],
+        confirmed: list[str] | None = None,
     ) -> None:
         self.original = original
         self.original_text = resume_to_text(original)
         self.original_low = self.original_text.lower()
+        # What the candidate vouches for: the resume plus skills they confirmed.
+        # Used for Skills and the summary; bullets still need the role's evidence.
+        self.confirmed = [c.strip() for c in (confirmed or []) if c.strip()]
+        self.profile_low = " ".join([self.original_low, *(c.lower() for c in self.confirmed)])
         self.original_numbers = numbers_in(self.original_text)
         # The target title itself isn't a claim: echoing it in the summary is
         # standard ATS advice, so only skills and keywords are checked.
@@ -97,6 +105,15 @@ class _Guard:
 
     def invented_numbers(self, text: str) -> set[str]:
         return numbers_in(text) - self.original_numbers
+
+    def lost_terms(self, before: str, after: str) -> list[str]:
+        """Job terms the original text had that the rewrite dropped."""
+        before_low, after_low = before.lower(), after.lower()
+        return [
+            t
+            for t in self.job_terms
+            if contains_term(before_low, t) and not contains_term(after_low, t)
+        ]
 
     def supported(self, term: str, context_low: str) -> bool:
         """The context shows the term itself, or verified evidence for it."""
@@ -119,7 +136,7 @@ class _Guard:
         if not tailored:
             return self.original.summary
         claims = sorted(self.invented_numbers(tailored)) + self.unsupported_terms(
-            tailored, self.original_low
+            tailored, self.profile_low
         )
         if claims:
             self.flags.append(
@@ -140,13 +157,14 @@ class _Guard:
             items = []
             for item in group.items:
                 item = clean_dashes(item)
-                if self.supported(item, self.original_low):
+                if self.supported(item, self.profile_low):
                     items.append(item)
                 else:
                     self.moved_skills.append(item)
             if items:
                 group.items = items
                 kept_groups.append(group)
+        self._restore_job_skills(kept_groups)
         if self.moved_skills:
             self.flags.append(
                 Flag(
@@ -157,6 +175,22 @@ class _Guard:
                 )
             )
         return kept_groups or self.original.skills
+
+    def _restore_job_skills(self, groups: list) -> None:
+        """A skill the job asks for that the original listed must survive tailoring."""
+        if not groups:
+            return
+        present = " ".join(i for g in groups for i in g.items).lower()
+        for original_group in self.original.skills:
+            for item in original_group.items:
+                relevant = any(contains_term(item.lower(), t) for t in self.job_terms)
+                if relevant and not contains_term(present, item):
+                    home = next(
+                        (g for g in groups if g.name.lower() == original_group.name.lower()),
+                        groups[0],
+                    )
+                    home.items.append(item)
+                    present += " " + item.lower()
 
     def bullets(
         self,
@@ -176,6 +210,7 @@ class _Guard:
         dropped: set[int] = set()
         reverted = 0
         lost_metrics = 0
+        lost_keywords = 0
         for bullet, source_index in zip(rewritten, pairs, strict=True):
             source = original.bullets[source_index]
             bullet = strip_keyword_tag(bullet, source)
@@ -186,6 +221,10 @@ class _Guard:
                 # Metrics are the strongest evidence on a resume; never lose one.
                 bullet = source
                 lost_metrics += 1
+            elif self.lost_terms(source, bullet):
+                # Tailoring must never lower the match: keep job keywords it had.
+                bullet = source
+                lost_keywords += 1
             key = bullet.strip().lower()
             if key in seen:
                 dropped.add(source_index)  # a repeated line; its source still needs a home
@@ -208,6 +247,15 @@ class _Guard:
                     "doesn't show.",
                 )
             )
+        if lost_keywords:
+            self.flags.append(
+                Flag(
+                    section=section,
+                    item_id=original.id,
+                    message=f"{lost_keywords} bullet{'s' if lost_keywords > 1 else ''} kept as "
+                    "originally written, because the rewrite dropped a keyword this job asks for.",
+                )
+            )
         if lost_metrics:
             self.flags.append(
                 Flag(
@@ -221,9 +269,13 @@ class _Guard:
 
 
 def apply_output(
-    original: ResumeDoc, output: TailorOutput, analysis: JobAnalysis, sections: list[Section]
+    original: ResumeDoc,
+    output: TailorOutput,
+    analysis: JobAnalysis,
+    sections: list[Section],
+    confirmed: list[str] | None = None,
 ) -> tuple[ResumeDoc, list[KeywordSuggestion], list[Flag]]:
-    guard = _Guard(original, analysis, output.term_evidence)
+    guard = _Guard(original, analysis, output.term_evidence, confirmed)
     doc = original.model_copy(deep=True)
 
     if "summary" in sections:
@@ -243,6 +295,7 @@ def apply_output(
         s
         for s in output.keyword_suggestions
         if not contains_term(resume_to_text(doc).lower(), s.keyword)
+        and not any(contains_term(c.lower(), s.keyword) for c in guard.confirmed)
     ]
     known = {s.keyword.lower() for s in suggestions}
     for skill in guard.moved_skills:

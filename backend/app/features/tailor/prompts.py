@@ -94,6 +94,8 @@ def build_user_prompt(
     sections: list[Section],
     tone: Tone,
     match: MatchScore,
+    confirmed: list[str] | None = None,
+    focus: str = "",
 ) -> str:
     missing = match.missing_must_have + match.missing_keywords
     analysis_json = json.dumps(analysis.model_dump(by_alias=True), ensure_ascii=False)
@@ -111,7 +113,11 @@ ORIGINAL RESUME (JSON, the only source of facts):
 JD TERMS THE RESUME DOES NOT CURRENTLY CONTAIN (use only where truthful, otherwise suggest):
 {", ".join(missing) or "none"}
 
-SECTIONS TO TAILOR: {", ".join(sections)}
+CANDIDATE-CONFIRMED SKILLS (the candidate states they genuinely have these; they are facts
+you may add to the skills section and mention in the summary, but not attach to a specific
+role's bullets unless that role's original text shows it): {", ".join(confirmed or []) or "none"}
+
+{focus}SECTIONS TO TAILOR: {", ".join(sections)}
 TONE: {tone_guide[tone]}
 
 Return the tailored sections now, obeying every grounding rule."""
