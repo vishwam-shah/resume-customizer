@@ -141,7 +141,7 @@
           "latex"
         ],
         "summary": "Apply Latex",
-        "description": "Write the tailored text back into the user's LaTeX, leaving layout untouched.",
+        "description": "Write the tailored text into the user's LaTeX, layout untouched, and by\ndefault keep it on one page by trimming the least relevant bullets.",
         "operationId": "apply_latex_api_v1_latex_apply_post",
         "requestBody": {
           "content": {
@@ -163,6 +163,41 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/latex/compile": {
+      "post": {
+        "tags": [
+          "latex"
+        ],
+        "summary": "Compile Source",
+        "description": "Compile LaTeX to PDF (or a PNG of page 1 for previews). X-Pages has the page count.",
+        "operationId": "compile_source_api_v1_latex_compile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LatexCompileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -774,6 +809,11 @@
           },
           "tailored": {
             "$ref": "#/components/schemas/ResumeDoc"
+          },
+          "fitOnePage": {
+            "type": "boolean",
+            "title": "Fitonepage",
+            "default": true
           }
         },
         "type": "object",
@@ -808,6 +848,33 @@
             },
             "type": "array",
             "title": "Unmatched"
+          },
+          "bulletsRemoved": {
+            "type": "integer",
+            "title": "Bulletsremoved",
+            "default": 0
+          },
+          "pages": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pages"
+          },
+          "compileError": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Compileerror"
           }
         },
         "type": "object",
@@ -819,6 +886,30 @@
           "unmatched"
         ],
         "title": "LatexApplyResult"
+      },
+      "LatexCompileRequest": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "maxLength": 200000,
+            "minLength": 1,
+            "title": "Source"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "pdf",
+              "png"
+            ],
+            "title": "Format",
+            "default": "pdf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source"
+        ],
+        "title": "LatexCompileRequest"
       },
       "LatexSource": {
         "properties": {

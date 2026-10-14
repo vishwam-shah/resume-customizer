@@ -118,3 +118,39 @@ def test_skills_on_the_line_after_the_group_name():
     assert report.skills_updated == 1 and not report.unmatched
     assert r"& TypeScript, Python \\[2pt]" in report.source
     assert "& Pinecone, PostgreSQL" in report.source
+
+
+def test_summary_section_is_inserted_when_template_has_none():
+    original = make_resume()
+    original.summary = None
+    tailored = original.model_copy(deep=True)
+    tailored.summary = "Backend engineer who ships Python APIs."
+    no_summary = source.replace(
+        "\section{Summary}\n\small{Software engineer who builds web apps.}\n", ""
+    )
+    report = apply_tailoring(no_summary, original, tailored)
+    assert report.summary_updated and not any("summary" in u for u in report.unmatched)
+    out = report.source
+    assert out.index(r"\section{Summary}") < out.index(r"\section{Skills}")
+    assert "Backend engineer who ships Python APIs." in out
+
+
+def test_compile_endpoint_refuses_file_access_without_running_tex():
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+
+    r = TestClient(app).post(
+        "/api/v1/latex/compile", json={"source": r"\input{/proc/self/environ}"}
+    )
+    assert r.status_code == 422 and r.json()["error"]["code"] == "unsafeLatex"
+
+
+def test_trimmed_bullets_are_removed_from_the_template():
+    original = make_resume()
+    tailored = original.model_copy(deep=True)
+    tailored.experience[0].bullets = [original.experience[0].bullets[1]]  # keep one, trimmed
+    out = apply_tailoring(source, original, tailored).source
+    assert "Built a FastAPI service" not in out  # the whole \resumeItem line is gone
+    assert r"\resumeItem{Added semantic search with Pinecone for 40\% faster lookups}" in out
+    assert out.count("{") == out.count("}")

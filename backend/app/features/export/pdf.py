@@ -226,7 +226,7 @@ def _fits(doc: ResumeDoc, layout: _Layout, paper: Paper) -> bool:
     return not more
 
 
-def _trim_steps(doc: ResumeDoc):
+def trim_steps(doc: ResumeDoc):
     """Ever-shorter versions of the resume, one removal at a time.
 
     Bullets are tailored most-relevant-first, so cuts come from the end of a
@@ -268,7 +268,8 @@ def _trim_steps(doc: ResumeDoc):
         return False
 
     while next_cut():
-        yield current, notes()
+        # A snapshot, so callers may keep several steps (e.g. a binary search).
+        yield current.model_copy(deep=True), notes()
 
 
 def fit_resume(doc: ResumeDoc, paper: Paper = "a4") -> FitResult:
@@ -286,7 +287,7 @@ def fit_resume(doc: ResumeDoc, paper: Paper = "a4") -> FitResult:
             return done(doc, layout, [])
 
     floor = _layouts[-1]
-    for trimmed_doc, note in _trim_steps(doc):
+    for trimmed_doc, note in trim_steps(doc):
         if _fits(trimmed_doc, floor, paper):
             return done(trimmed_doc, floor, note)
     # Extraordinarily long resume: render everything rather than gut it further.

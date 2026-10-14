@@ -29,6 +29,9 @@ class _Span:
     start: int
     end: int
     text: str  # readable text of the span
+    # The whole bullet command (e.g. "\resumeItem{...}" or "\item ..."), for deletion.
+    outer_start: int = 0
+    outer_end: int = 0
     entry: str | None = None
     index: int | None = None  # index of the original bullet it holds
 
@@ -37,6 +40,7 @@ class _Span:
 class ApplyReport:
     source: str
     bullets_updated: int = 0
+    bullets_removed: int = 0
     summary_updated: bool = False
     skills_updated: int = 0
     unmatched: list[str] = field(default_factory=list)
@@ -71,7 +75,9 @@ def _bullet_spans(source: str) -> list[_Span]:
             if _is_commented(source, pos) or pos >= len(source) or source[pos] != "{":
                 continue
             content, after = read_braced(source, pos)
-            spans.append(_Span(pos + 1, after - 1, latex_to_text(content)))
+            spans.append(
+                _Span(pos + 1, after - 1, latex_to_text(content), body_start + match.start(), after)
+            )
 
     boundary = re.compile(r"\\item\b|\\end\{|\\begin\{|\\[A-Za-z]*ListEnd\b|\\(?:sub)*section")
     for match in re.finditer(r"\\item\b(\s*\[[^\]]*\])?", source[body_start:body_end]):
@@ -87,8 +93,19 @@ def _bullet_spans(source: str) -> list[_Span]:
         text = latex_to_text(source[start:end])
         # Inside a macro definition or an already-captured macro argument: skip.
         if text and not any(s.start <= start < s.end for s in spans):
-            spans.append(_Span(start, end, text))
+            spans.append(_Span(start, end, text, body_start + match.start(), end))
     return sorted(spans, key=lambda s: s.start)
+
+
+def _deletion(source: str, span: _Span) -> tuple[int, int, str]:
+    """Remove a whole bullet command, and its line when nothing else is on it."""
+    start, end = span.outer_start, span.outer_end
+    line_start = source.rfind("\n", 0, start) + 1
+    line_end = source.find("\n", end)
+    line_end = len(source) if line_end == -1 else line_end
+    if not source[line_start:start].strip() and not source[end:line_end].strip():
+        return line_start, min(line_end + 1, len(source)), ""
+    return start, end, ""
 
 
 def _replace(source: str, edits: list[tuple[int, int, str]]) -> str:
@@ -132,10 +149,15 @@ def _bullet_edits(source: str, original: ResumeDoc, tailored: ResumeDoc, report:
                 report.unmatched.append(f"bullets of {getattr(entry, 'role', None) or entry.name}")
             continue
         pairs = pair_bullets(entry.bullets, new)
-        complete = len(mine) == len(entry.bullets) == len(new)
+        # Every bullet of this entry was found: write the tailored order, and
+        # remove the leftover bullets when the tailored list is shorter (trimmed).
+        complete = len(mine) == len(entry.bullets) and len(new) <= len(mine)
         for position, span in enumerate(mine):
+            if complete and position >= len(new):
+                edits.append(_deletion(source, span))
+                report.bullets_removed += 1
+                continue
             if complete:
-                # Every bullet of this entry was found: write the tailored order.
                 text = new[position]
             else:
                 # Partial match: rewrite each found bullet in place, no reordering.
@@ -156,10 +178,9 @@ _wrapper = re.compile(r"^(\\[A-Za-z]+\s*\{)(.*)(\})$", re.S)
 def _summary_edit(source: str, original: ResumeDoc, tailored: ResumeDoc, report: ApplyReport):
     if not tailored.summary or original.summary == tailored.summary:
         return []
-    if not original.summary:
-        report.unmatched.append("summary (your LaTeX has no summary section to update)")
-        return []
     body_start, body_end = _body_bounds(source)
+    if not original.summary:
+        return _insert_summary(source, tailored.summary, body_start, body_end, report)
     heads = list(_section.finditer(source, body_start, body_end))
     best: tuple[float, int, int] | None = None
     for i, head in enumerate(heads):
@@ -181,6 +202,19 @@ def _summary_edit(source: str, original: ResumeDoc, tailored: ResumeDoc, report:
     new_inner = f"{wrapped.group(1)}{text}{wrapped.group(3)}" if wrapped else text
     report.summary_updated = True
     return [(start + lead, end - trail, new_inner)]
+
+
+def _insert_summary(source: str, summary: str, body_start: int, body_end: int, report):
+    """No summary in the template: add one before the first section, styled
+    with the template's own section command (e.g. \section or \section*)."""
+    first = _section.search(source, body_start, body_end)
+    if not first:
+        report.unmatched.append("summary (no sections found to place it before)")
+        return []
+    command = first.group(0).split("{", 1)[0]  # "\section" or "\section*"
+    block = f"{command}{{Summary}}\n{escape(summary)}\n\n"
+    report.summary_updated = True
+    return [(first.start(), first.start(), block)]
 
 
 def _skill_edits(source: str, original: ResumeDoc, tailored: ResumeDoc, report: ApplyReport):

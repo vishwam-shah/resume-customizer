@@ -1,0 +1,32 @@
+% Compiled once while building the Docker image so the LaTeX packages that
+% resume templates commonly use (Jake's Resume, Awesome-CV style, AltaCV
+% style) are already cached when the first user compiles.
+\documentclass[letterpaper,11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{xcolor}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage{geometry}
+\usepackage{multicol}
+\usepackage{ragged2e}
+\usepackage{parskip}
+\usepackage{graphicx}
+\usepackage{fontawesome5}
+\usepackage{lmodern}
+\usepackage{charter}
+\begin{document}
+\section{Warm up}
+\textbf{Bold} \textit{italic} \faGithub\ \faLinkedin\ \Mundus\ $\bullet$
+\begin{itemize}\item One \item Two\end{itemize}
+\begin{tabular*}{\textwidth}{l@{\extracolsep{\fill}}r}A & B \ \end{tabular*}
+\end{document}

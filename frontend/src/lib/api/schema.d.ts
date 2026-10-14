@@ -89,9 +89,30 @@ export interface paths {
         put?: never;
         /**
          * Apply Latex
-         * @description Write the tailored text back into the user's LaTeX, leaving layout untouched.
+         * @description Write the tailored text into the user's LaTeX, layout untouched, and by
+         *     default keep it on one page by trimming the least relevant bullets.
          */
         post: operations["apply_latex_api_v1_latex_apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/latex/compile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compile Source
+         * @description Compile LaTeX to PDF (or a PNG of page 1 for previews). X-Pages has the page count.
+         */
+        post: operations["compile_source_api_v1_latex_compile_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -303,6 +324,11 @@ export interface components {
             source: string;
             original: components["schemas"]["ResumeDoc"];
             tailored: components["schemas"]["ResumeDoc"];
+            /**
+             * Fitonepage
+             * @default true
+             */
+            fitOnePage: boolean;
         };
         /** LatexApplyResult */
         LatexApplyResult: {
@@ -316,6 +342,26 @@ export interface components {
             skillsUpdated: number;
             /** Unmatched */
             unmatched: string[];
+            /**
+             * Bulletsremoved
+             * @default 0
+             */
+            bulletsRemoved: number;
+            /** Pages */
+            pages?: number | null;
+            /** Compileerror */
+            compileError?: string | null;
+        };
+        /** LatexCompileRequest */
+        LatexCompileRequest: {
+            /** Source */
+            source: string;
+            /**
+             * Format
+             * @default pdf
+             * @enum {string}
+             */
+            format: "pdf" | "png";
         };
         /** LatexSource */
         LatexSource: {
@@ -676,6 +722,37 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["LatexApplyResult"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compile_source_api_v1_latex_compile_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LatexCompileRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

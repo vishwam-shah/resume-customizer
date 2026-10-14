@@ -8,6 +8,7 @@ import { ApiError, applyLatex, isAbort } from "@/lib/api/client";
 import type { LatexApplyResult, ResumeDoc } from "@/lib/api/types";
 import { pluralize } from "@/lib/format";
 import { saveBlob } from "../results/DownloadMenu";
+import { CompiledPreview } from "./CompiledPreview";
 
 type Props = {
   source: string;
@@ -105,7 +106,7 @@ export function LatexPanel({ source, original, tailored, edited, onEdit, fileSte
         <div className="max-w-2xl text-sm" role="status" aria-live="polite">
           {loading && !result ? (
             <p className="flex items-center gap-2 text-muted">
-              <Spinner /> Writing your changes into the template…
+              <Spinner /> Writing your changes into the template and fitting it on one page…
             </p>
           ) : result ? (
             <p>
@@ -116,6 +117,14 @@ export function LatexPanel({ source, original, tailored, edited, onEdit, fileSte
                 {" "}
                 in your own template. Preamble, macros and layout are unchanged.
               </span>
+              {result.bulletsRemoved > 0 ? (
+                <span className="mt-1 block text-muted">
+                  To keep it on one page,{" "}
+                  {pluralize(result.bulletsRemoved, "lower-priority bullet")}{" "}
+                  {result.bulletsRemoved === 1 ? "was" : "were"} left out. They're still in the
+                  Changes tab if you'd rather shorten something else.
+                </span>
+              ) : null}
             </p>
           ) : null}
           {result?.unmatched.length ? (
@@ -170,20 +179,27 @@ export function LatexPanel({ source, original, tailored, edited, onEdit, fileSte
         </div>
       </div>
 
-      <label htmlFor={`${id}-source`} className="mt-5 block font-medium text-sm">
-        Tailored LaTeX, editable
-      </label>
-      <textarea
-        id={`${id}-source`}
-        value={text}
-        onChange={(e) => onEdit(e.target.value)}
-        spellCheck={false}
-        autoCapitalize="off"
-        autoCorrect="off"
-        rows={28}
-        aria-busy={loading || undefined}
-        className="mt-2 w-full resize-y rounded-[var(--radius-card)] border border-border-strong bg-surface px-4 py-3 font-mono text-[0.8125rem] leading-relaxed hover:border-fg"
-      />
+      <div className="mt-5 grid gap-6 lg:grid-cols-2">
+        <div className="flex flex-col">
+          <label htmlFor={`${id}-source`} className="font-medium text-sm">
+            Tailored LaTeX, editable
+          </label>
+          <textarea
+            id={`${id}-source`}
+            value={text}
+            onChange={(e) => onEdit(e.target.value)}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            rows={30}
+            aria-busy={loading || undefined}
+            className="mt-2 min-h-[32rem] w-full flex-1 resize-y rounded-[var(--radius-card)] border border-border-strong bg-surface px-4 py-3 font-mono text-[0.8125rem] leading-relaxed hover:border-fg"
+          />
+        </div>
+        {text ? (
+          <CompiledPreview source={text} edited={edited !== null} fileName={fileName} />
+        ) : null}
+      </div>
     </div>
   );
 }

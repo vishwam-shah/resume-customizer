@@ -10,13 +10,26 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-install-project --no-dev
 
+# ---- tectonic: self-contained LaTeX engine for compiling pasted resumes ----
+FROM python:3.13-slim AS tectonic
+ARG TECTONIC_VERSION=0.17.0
+ADD https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%40${TECTONIC_VERSION}/tectonic-${TECTONIC_VERSION}-x86_64-unknown-linux-musl.tar.gz /tmp/tectonic.tar.gz
+RUN tar -xzf /tmp/tectonic.tar.gz -C /usr/local/bin tectonic && tectonic --version
+
 # ---- runtime: slim image, non-root user, app code only ----
 FROM python:3.13-slim
-ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PORT=8000 ENVIRONMENT=production
+ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 PORT=8000 ENVIRONMENT=production \
+    TECTONIC_CACHE=/opt/tex-cache TECTONIC_HOME=/opt/tex-cache XDG_CACHE_HOME=/opt/tex-cache
+COPY --from=tectonic /usr/local/bin/tectonic /usr/local/bin/tectonic
 RUN useradd --create-home --uid 1001 app
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
 COPY app ./app
+# Pre-download the common resume packages so the first compile is fast, then
+# hand the cache to the app user (compiles run as that user).
+RUN mkdir -p /opt/tex-cache /tmp/warmup && cp app/features/latex/warmup.tex /tmp/warmup/ \
+    && tectonic -X compile --untrusted /tmp/warmup/warmup.tex \
+    && rm -rf /tmp/warmup && chown -R app:app /opt/tex-cache
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s CMD python -c "import urllib.request,os;urllib.request.urlopen(f'http://127.0.0.1:{os.environ[\"PORT\"]}/api/v1/health')"

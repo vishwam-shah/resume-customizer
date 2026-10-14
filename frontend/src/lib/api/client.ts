@@ -152,3 +152,18 @@ export async function applyLatex(
   });
   return response.json();
 }
+
+/** Compile LaTeX on the server: the PDF, or a PNG of page 1 for previews. */
+export async function compileLatex(
+  source: string,
+  format: "pdf" | "png",
+  signal?: AbortSignal,
+): Promise<{ blob: Blob; pages: number }> {
+  const response = await request("/api/v1/latex/compile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source, format }),
+    signal,
+  });
+  return { blob: await response.blob(), pages: Number(response.headers.get("X-Pages") ?? 1) };
+}

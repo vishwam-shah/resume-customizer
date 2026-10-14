@@ -60,7 +60,7 @@ def create_app() -> FastAPI:
         allow_origins=settings.cors_origin_list,
         allow_methods=["GET", "POST"],
         allow_headers=["Content-Type"],
-        expose_headers=["Content-Disposition", "X-Resume-Fit"],
+        expose_headers=["Content-Disposition", "X-Resume-Fit", "X-Pages"],
         max_age=600,
     )
     install_error_handlers(app)
