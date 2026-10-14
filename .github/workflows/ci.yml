@@ -55,3 +55,22 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
+
+  # Deploy the API to Render only after both jobs pass on main. Uses Render's
+  # Deploy Hook (a secret URL), so it works whether or not Render's GitHub
+  # app is connected. Skipped until the RENDER_DEPLOY_HOOK secret is set.
+  deploy-api:
+    needs: [backend, frontend]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK is not set; skipping deploy."
+            exit 0
+          fi
+          curl --fail --silent --show-error -X POST "$HOOK" > /dev/null
+          echo "Render deploy triggered for $GITHUB_SHA"
